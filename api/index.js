@@ -10,7 +10,7 @@ const TARGET_ORIGIN = new URL(TARGET_API_URL).origin;
 
 app.all('*', async (req, res) => {
   if (req.url === '/') {
-    return res.send('proxy is running, you can see more at https://github.com/spectre-pro/gemini-proxy');
+    return res.send('proxy is running');
   } 
   const targetUrl = `${TARGET_API_URL}${req.url}`;
   let rawApiKeys = '';

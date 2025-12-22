@@ -8,16 +8,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/spectre-pro/gemini-proxy.git"
+    "url": "git+https://github.com/yin2hao/gemini-proxy.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "bugs": {
-    "url": "https://github.com/spectre-pro/gemini-proxy/issues"
+    "url": "https://github.com/yin2hao/gemini-proxy/issues"
   },
-  "homepage": "https://github.com/spectre-pro/gemini-proxy#readme",
   "dependencies": {
     "express": "^4.21.2"
   }
