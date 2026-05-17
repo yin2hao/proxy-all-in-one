@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proxy Manager</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      line-height: 1.6;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    header {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    header h1 {
+      font-size: 24px;
+      color: #2c3e50;
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: #3498db;
+      color: #fff;
+    }
+    
+    .btn-primary:hover {
+      background: #2980b9;
+    }
+    
+    .btn-danger {
+      background: #e74c3c;
+      color: #fff;
+    }
+    
+    .btn-danger:hover {
+      background: #c0392b;
+    }
+    
+    .btn-success {
+      background: #2ecc71;
+      color: #fff;
+    }
+    
+    .btn-success:hover {
+      background: #27ae60;
+    }
+    
+    .btn-secondary {
+      background: #95a5a6;
+      color: #fff;
+    }
+    
+    .btn-secondary:hover {
+      background: #7f8c8d;
+    }
+    
+    .proxy-list {
+      display: grid;
+      gap: 16px;
+    }
+    
+    .proxy-card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: all 0.2s;
+    }
+    
+    .proxy-card:hover {
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .proxy-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+    
+    .proxy-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+    
+    .proxy-domain {
+      color: #7f8c8d;
+      font-size: 14px;
+    }
+    
+    .proxy-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .proxy-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    
+    .detail-item {
+      background: #f8f9fa;
+      padding: 10px 12px;
+      border-radius: 6px;
+    }
+    
+    .detail-label {
+      font-size: 12px;
+      color: #7f8c8d;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .detail-value {
+      font-size: 14px;
+      color: #2c3e50;
+      word-break: break-all;
+    }
+    
+    .mode-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    .mode-simple {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    
+    .mode-filtered {
+      background: #fff3e0;
+      color: #ef6c00;
+    }
+    
+    /* Modal Styles */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .modal-overlay.active {
+      display: flex;
+    }
+    
+    .modal {
+      background: #fff;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 24px;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    
+    .modal-header h2 {
+      font-size: 20px;
+      color: #2c3e50;
+    }
+    
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #7f8c8d;
+    }
+    
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      color: #2c3e50;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #3498db;
+    }
+    
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .checkbox-group input[type="checkbox"] {
+      width: auto;
+    }
+    
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid #eee;
+    }
+    
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 12px 24px;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 14px;
+      z-index: 2000;
+      animation: slideIn 0.3s ease;
+    }
+    
+    .toast-success {
+      background: #2ecc71;
+    }
+    
+    .toast-error {
+      background: #e74c3c;
+    }
+    
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #7f8c8d;
+    }
+    
+    .empty-state p {
+      margin-bottom: 20px;
+    }
+    
+    .auth-info {
+      font-size: 12px;
+      color: #7f8c8d;
+      margin-top: 4px;
+    }
+    
+    .login-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    
+    .login-box {
+      background: #fff;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+    
+    .login-box h1 {
+      font-size: 28px;
+      color: #2c3e50;
+      margin-bottom: 8px;
+    }
+    
+    .login-subtitle {
+      color: #7f8c8d;
+      margin-bottom: 24px;
+    }
+    
+    .login-error {
+      background: #fee;
+      color: #e74c3c;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 16px;
+      font-size: 14px;
+    }
+    
+    .btn-full {
+      width: 100%;
+    }
+    
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .mode-banner {
+      background: linear-gradient(135deg, #fff4d9, #ffe8b3);
+      color: #7a4b00;
+      border: 1px solid #f2cf7a;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 6px rgba(122, 75, 0, 0.08);
+    }
+
+    .mode-banner strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 15px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Login Page -->
+    <div id="loginPage" style="display: none;">
+      <div class="login-container">
+        <div class="login-box">
+          <h1>🔐 Proxy Manager</h1>
+          <p class="login-subtitle">Enter admin password to continue</p>
+          <form onsubmit="handleLogin(event)">
+            <div class="form-group">
+              <input type="password" id="loginPassword" placeholder="Password" required autofocus>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">Login</button>
+          </form>
+          <div id="loginError" class="login-error" style="display: none;"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Main Page -->
+    <div id="mainPage" style="display: none;">
+      <div id="modeBanner" class="mode-banner hidden"></div>
+      <header>
+        <h1>🔧 Proxy Manager</h1>
+        <div class="header-actions">
+          <button id="addProxyButton" class="btn btn-primary" onclick="openAddModal()">+ Add Proxy</button>
+          <button id="logoutButton" class="btn btn-secondary" onclick="logout()">Logout</button>
+        </div>
+      </header>
+      
+      <div id="proxyList" class="proxy-list">
+        <div class="empty-state">
+          <p>Loading...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Add/Edit Modal -->
+  <div id="proxyModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modalTitle">Add Proxy</h2>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      
+      <form id="proxyForm" onsubmit="saveProxy(event)">
+        <input type="hidden" id="editIndex" value="-1">
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="proxyName" placeholder="e.g., gemini" required>
+          </div>
+          <div class="form-group">
+            <label>Mode</label>
+            <select id="proxyMode" onchange="toggleModeFields()">
+              <option value="simple">Simple</option>
+              <option value="filtered">Filtered</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Domain (for URL routing)</label>
+          <input type="text" id="proxyDomain" placeholder="e.g., generativelanguage.googleapis.com" required>
+        </div>
+        
+        <div class="form-group">
+          <label>Target URL</label>
+          <input type="text" id="proxyTarget" placeholder="e.g., https://generativelanguage.googleapis.com" required>
+        </div>
+        
+        <!-- Filtered Mode Fields -->
+        <div id="filteredFields">
+          <div class="form-group">
+            <label>Auth Type</label>
+            <select id="authType" onchange="toggleAuthFields()">
+              <option value="">None</option>
+              <option value="api-key">API Key</option>
+            </select>
+          </div>
+          
+          <div id="authFields" style="display: none;">
+            <div class="form-group">
+              <label>Key Sources (comma-separated)</label>
+              <input type="text" id="authSources" placeholder="e.g., x-goog-api-key, authorization-bearer" value="x-goog-api-key, authorization-bearer">
+              <div class="auth-info">Supported: x-goog-api-key, authorization-bearer</div>
+            </div>
+            <div class="form-group">
+              <div class="checkbox-group">
+                <input type="checkbox" id="authMultiKey" checked>
+                <label for="authMultiKey">Enable multi-key random selection</label>
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <div class="checkbox-group">
+              <input type="checkbox" id="forwardedHeaders" checked>
+              <label for="forwardedHeaders">Forward X-Forwarded-For headers</label>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Remove Request Headers (comma-separated)</label>
+          <input type="text" id="removeReqHeaders" placeholder="e.g., host, content-length">
+        </div>
+        
+        <div class="form-group">
+          <label>Remove Response Headers (comma-separated)</label>
+          <input type="text" id="removeResHeaders" placeholder="e.g., content-encoding, transfer-encoding">
+        </div>
+        
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="btn btn-success">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <script>
+    let config = { proxies: [] };
+    let authToken = localStorage.getItem('proxyAuthToken');
+    let isReadOnly = false;
+    
+    // Check auth status and show appropriate page
+    async function checkAuth() {
+      await loadConfig();
+      updateReadOnlyUI();
+
+      if (isReadOnly) {
+        showMainPage();
+        return;
+      }
+
+      if (authToken) {
+        showMainPage();
+      } else {
+        showLoginPage();
+      }
+    }
+    
+    function showLoginPage() {
+      document.getElementById('loginPage').style.display = 'block';
+      document.getElementById('mainPage').style.display = 'none';
+    }
+    
+    function showMainPage() {
+      document.getElementById('loginPage').style.display = 'none';
+      document.getElementById('mainPage').style.display = 'block';
+    }
+    
+    // Handle login
+    async function handleLogin(event) {
+      event.preventDefault();
+      const password = document.getElementById('loginPassword').value;
+      const errorEl = document.getElementById('loginError');
+      
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password })
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok && data.success) {
+          authToken = data.token;
+          localStorage.setItem('proxyAuthToken', authToken);
+          errorEl.style.display = 'none';
+          showMainPage();
+          await loadConfig();
+        } else {
+          errorEl.textContent = data.error || 'Login failed';
+          errorEl.style.display = 'block';
+        }
+      } catch (err) {
+        errorEl.textContent = 'Connection error';
+        errorEl.style.display = 'block';
+      }
+    }
+    
+    // Logout
+    function logout() {
+      authToken = null;
+      localStorage.removeItem('proxyAuthToken');
+      showLoginPage();
+    }
+    
+    // Load config on page load
+    async function loadConfig() {
+      try {
+        const res = await fetch('/api/config');
+        isReadOnly = res.headers.get('X-Config-Editable') !== 'true';
+        config = await res.json();
+        renderProxyList();
+      } catch (err) {
+        showToast('Failed to load config', 'error');
+      }
+    }
+
+    function updateReadOnlyUI() {
+      const banner = document.getElementById('modeBanner');
+      const addButton = document.getElementById('addProxyButton');
+      const logoutButton = document.getElementById('logoutButton');
+
+      if (isReadOnly) {
+        banner.classList.remove('hidden');
+        banner.innerHTML = `
+          <strong>Cloud read-only mode</strong>
+          <span>This page can view the current config, but editing is only enabled when accessed from localhost.</span>
+        `;
+        addButton.classList.add('hidden');
+        logoutButton.classList.add('hidden');
+      } else {
+        banner.classList.add('hidden');
+        banner.innerHTML = '';
+        addButton.classList.remove('hidden');
+        logoutButton.classList.remove('hidden');
+      }
+    }
+    
+    // Render proxy list
+    function renderProxyList() {
+      const container = document.getElementById('proxyList');
+      
+      if (config.proxies.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <p>${isReadOnly ? 'No proxies configured.' : 'No proxies configured yet.'}</p>
+            ${isReadOnly ? '' : '<button class="btn btn-primary" onclick="openAddModal()">Add Your First Proxy</button>'}
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = config.proxies.map((proxy, index) => `
+        <div class="proxy-card">
+          <div class="proxy-header">
+            <div>
+              <div class="proxy-title">${escapeHtml(proxy.name)}</div>
+              <div class="proxy-domain">${escapeHtml(proxy.domain)}</div>
+            </div>
+            ${isReadOnly ? '' : `
+              <div class="proxy-actions">
+                <button class="btn btn-secondary" onclick="editProxy(${index})">Edit</button>
+                <button class="btn btn-danger" onclick="deleteProxy(${index})">Delete</button>
+              </div>
+            `}
+          </div>
+          <div class="proxy-details">
+            <div class="detail-item">
+              <div class="detail-label">Target</div>
+              <div class="detail-value">${escapeHtml(proxy.target)}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Mode</div>
+              <div class="detail-value">
+                <span class="mode-badge mode-${proxy.mode}">${proxy.mode}</span>
+              </div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Auth</div>
+              <div class="detail-value">${proxy.auth ? proxy.auth.type : 'None'}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Forwarded Headers</div>
+              <div class="detail-value">${proxy.forwardedHeaders ? 'Yes' : 'No'}</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    // Open add modal
+    function openAddModal() {
+      if (isReadOnly) {
+        showToast('Cloud mode is read-only', 'error');
+        return;
+      }
+
+      document.getElementById('editIndex').value = -1;
+      document.getElementById('modalTitle').textContent = 'Add Proxy';
+      document.getElementById('proxyForm').reset();
+      document.getElementById('authMultiKey').checked = true;
+      document.getElementById('forwardedHeaders').checked = true;
+      toggleModeFields();
+      toggleAuthFields();
+      document.getElementById('proxyModal').classList.add('active');
+    }
+    
+    // Edit proxy
+    function editProxy(index) {
+      if (isReadOnly) {
+        showToast('Cloud mode is read-only', 'error');
+        return;
+      }
+
+      const proxy = config.proxies[index];
+      document.getElementById('editIndex').value = index;
+      document.getElementById('modalTitle').textContent = 'Edit Proxy';
+      
+      document.getElementById('proxyName').value = proxy.name;
+      document.getElementById('proxyDomain').value = proxy.domain;
+      document.getElementById('proxyTarget').value = proxy.target;
+      document.getElementById('proxyMode').value = proxy.mode;
+      
+      if (proxy.auth) {
+        document.getElementById('authType').value = proxy.auth.type || '';
+        document.getElementById('authSources').value = (proxy.auth.sources || []).join(', ');
+        document.getElementById('authMultiKey').checked = proxy.auth.multiKey !== false;
+      } else {
+        document.getElementById('authType').value = '';
+      }
+      
+      document.getElementById('forwardedHeaders').checked = proxy.forwardedHeaders !== false;
+      document.getElementById('removeReqHeaders').value = (proxy.headers?.removeRequest || []).join(', ');
+      document.getElementById('removeResHeaders').value = (proxy.headers?.removeResponse || []).join(', ');
+      
+      toggleModeFields();
+      toggleAuthFields();
+      document.getElementById('proxyModal').classList.add('active');
+    }
+    
+    // Close modal
+    function closeModal() {
+      document.getElementById('proxyModal').classList.remove('active');
+    }
+    
+    // Toggle mode-specific fields
+    function toggleModeFields() {
+      const mode = document.getElementById('proxyMode').value;
+      document.getElementById('filteredFields').style.display = mode === 'filtered' ? 'block' : 'none';
+    }
+    
+    // Toggle auth fields
+    function toggleAuthFields() {
+      const authType = document.getElementById('authType').value;
+      document.getElementById('authFields').style.display = authType ? 'block' : 'none';
+    }
+    
+    // Save proxy
+    async function saveProxy(event) {
+      event.preventDefault();
+
+      if (isReadOnly) {
+        showToast('Cloud mode is read-only', 'error');
+        return;
+      }
+      
+      const editIndex = parseInt(document.getElementById('editIndex').value);
+      const mode = document.getElementById('proxyMode').value;
+      
+      const proxy = {
+        name: document.getElementById('proxyName').value.trim(),
+        domain: document.getElementById('proxyDomain').value.trim(),
+        target: document.getElementById('proxyTarget').value.trim(),
+        mode: mode,
+        auth: null,
+        headers: {
+          removeRequest: parseCSV(document.getElementById('removeReqHeaders').value),
+          removeResponse: parseCSV(document.getElementById('removeResHeaders').value)
+        },
+        forwardedHeaders: mode === 'filtered' ? document.getElementById('forwardedHeaders').checked : false
+      };
+      
+      // Set auth config for filtered mode
+      if (mode === 'filtered' && document.getElementById('authType').value) {
+        proxy.auth = {
+          type: document.getElementById('authType').value,
+          sources: parseCSV(document.getElementById('authSources').value),
+          multiKey: document.getElementById('authMultiKey').checked
+        };
+      }
+      
+      // Update or add
+      if (editIndex >= 0) {
+        config.proxies[editIndex] = proxy;
+      } else {
+        config.proxies.push(proxy);
+      }
+      
+      // Save to server
+      try {
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify(config)
+        });
+        
+        if (res.ok) {
+          showToast('Proxy saved successfully', 'success');
+          closeModal();
+          renderProxyList();
+        } else if (res.status === 401) {
+          showToast('Session expired, please login again', 'error');
+          logout();
+        } else {
+          const err = await res.json();
+          showToast(err.error || 'Failed to save', 'error');
+        }
+      } catch (err) {
+        showToast('Failed to save config', 'error');
+      }
+    }
+    
+    // Delete proxy
+    async function deleteProxy(index) {
+      if (isReadOnly) {
+        showToast('Cloud mode is read-only', 'error');
+        return;
+      }
+
+      const proxy = config.proxies[index];
+      if (!confirm(`Delete proxy "${proxy.name}"?`)) return;
+      
+      config.proxies.splice(index, 1);
+      
+      try {
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify(config)
+        });
+        
+        if (res.ok) {
+          showToast('Proxy deleted', 'success');
+          renderProxyList();
+        } else if (res.status === 401) {
+          showToast('Session expired, please login again', 'error');
+          logout();
+        } else {
+          showToast('Failed to delete', 'error');
+          loadConfig();
+        }
+      } catch (err) {
+        showToast('Failed to delete', 'error');
+        loadConfig();
+      }
+    }
+    
+    // Parse comma-separated values
+    function parseCSV(str) {
+      return str.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    
+    // Escape HTML
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+    
+    // Show toast notification
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+    
+    // Check auth on page load
+    checkAuth();
+  </script>
+</body>
+</html>

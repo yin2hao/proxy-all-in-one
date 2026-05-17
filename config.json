@@ -1,0 +1,38 @@
+{
+  "proxies": [
+    {
+      "name": "gemini",
+      "domain": "generativelanguage.googleapis.com",
+      "target": "https://generativelanguage.googleapis.com",
+      "mode": "filtered",
+      "auth": {
+        "type": "api-key",
+        "sources": ["x-goog-api-key", "authorization-bearer"],
+        "multiKey": true
+      },
+      "headers": {
+        "set": {
+          "host": "{target_hostname}",
+          "origin": "{target_origin}",
+          "referer": "{target_url}"
+        },
+        "removeRequest": ["x-goog-api-key", "authorization"],
+        "removeResponse": ["content-encoding", "transfer-encoding", "connection", "strict-transport-security"]
+      },
+      "forwardedHeaders": true
+    },
+    {
+      "name": "example-simple",
+      "domain": "example2.com",
+      "target": "http://34.133.93.68",
+      "mode": "simple",
+      "auth": null,
+      "headers": {
+        "removeRequest": ["host", "content-length", "connection"],
+        "removeResponse": ["content-encoding", "content-length", "transfer-encoding", "connection"]
+      },
+      "forwardedHeaders": false
+    }
+  ],
+  "defaultProxy": null
+}
