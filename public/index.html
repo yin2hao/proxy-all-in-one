@@ -470,10 +470,10 @@
 
     .result-summary {
       display: grid;
-      min-height: 340px;
+      min-height: 92px;
       align-content: center;
       gap: 8px;
-      padding: 28px;
+      padding: 18px;
       border: 1px solid var(--line);
       border-radius: 8px;
       background: var(--surface-soft);
@@ -484,6 +484,14 @@
     .result-summary strong {
       color: #344054;
       font-size: 17px;
+    }
+
+    .config-preview {
+      margin-top: 12px;
+      min-height: 420px;
+      max-height: 65vh;
+      overflow: auto;
+      white-space: pre;
     }
 
     .result-toolbar {
@@ -738,8 +746,9 @@
             </div>
             <div class="result-summary">
               <strong id="resultSummaryTitle">完整配置已准备好</strong>
-              <span id="resultSummaryText">完整配置已生成，配置内容不会在页面中展示。</span>
+              <span id="resultSummaryText">完整配置已生成，可在下方预览。</span>
             </div>
+            <textarea id="configPreview" class="config-preview" readonly spellcheck="false" aria-label="完整配置预览"></textarea>
             <div id="resultMessage" class="message success">已生成完整配置文件，可复制或下载后替换仓库根目录的 config.json。</div>
           </div>
         </div>
@@ -1096,6 +1105,7 @@
         const removedText = removedCount > 0 ? `删除 ${removedCount} 条` : '未删除';
         $('resultSummaryTitle').textContent = '完整配置已准备好';
         $('resultSummaryText').textContent = `${addedText}，${removedText}；可直接复制或下载。`;
+        $('configPreview').value = state.lastConfigText;
         $('resultEmpty').style.display = 'none';
         $('resultReady').style.display = 'block';
         showMessage($('formMessage'), 'success', '已根据当前管理操作生成完整配置。');
@@ -1109,7 +1119,8 @@
       $('resultEmpty').style.display = 'grid';
       $('resultReady').style.display = 'none';
       $('resultSummaryTitle').textContent = '完整配置已准备好';
-      $('resultSummaryText').textContent = '完整配置已生成，配置内容不会在页面中展示。';
+      $('resultSummaryText').textContent = '完整配置已生成，可在下方预览。';
+      $('configPreview').value = '';
     }
 
     async function copyConfig() {
