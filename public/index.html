@@ -678,10 +678,6 @@
                 <span>从 x-goog-api-key 或 Authorization Bearer 中读取 API Key</span>
               </label>
               <label class="check-row">
-                <input type="checkbox" id="multiKey" checked>
-                <span>传入多个 Key 时随机选择一个</span>
-              </label>
-              <label class="check-row">
                 <input type="checkbox" id="forwardedHeaders" checked>
                 <span>保留 X-Forwarded-For 和 X-Forwarded-Proto</span>
               </label>
@@ -1052,8 +1048,7 @@
         if ($('apiKeyAuth').checked) {
           proxy.auth = {
             type: 'api-key',
-            sources: ['x-goog-api-key', 'authorization-bearer'],
-            multiKey: $('multiKey').checked
+            sources: ['x-goog-api-key', 'authorization-bearer']
           };
         }
 

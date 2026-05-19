@@ -7,8 +7,7 @@
       "mode": "filtered",
       "auth": {
         "type": "api-key",
-        "sources": ["x-goog-api-key", "authorization-bearer"],
-        "multiKey": true
+        "sources": ["x-goog-api-key", "authorization-bearer"]
       },
       "headers": {
         "set": {

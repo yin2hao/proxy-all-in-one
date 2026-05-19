@@ -40,37 +40,30 @@ function interpolate(template, vars) {
   return template.replace(/\{(\w+)\}/g, (_, key) => vars[key] || '');
 }
 
-// 处理 API Key（多 key 随机选择）
+// 处理 API Key
 function extractApiKey(headers, authConfig) {
   if (!authConfig) return { key: '', source: '' };
   
-  let rawKeys = '';
+  let rawKey = '';
   let source = '';
   
   for (const src of authConfig.sources) {
     if (src === 'x-goog-api-key' && headers['x-goog-api-key']) {
-      rawKeys = headers['x-goog-api-key'];
+      rawKey = headers['x-goog-api-key'];
       source = 'x-goog';
       break;
     }
     if (src === 'authorization-bearer' && headers.authorization?.toLowerCase().startsWith('bearer ')) {
-      rawKeys = headers.authorization.substring(7);
+      rawKey = headers.authorization.substring(7);
       source = 'auth';
       break;
     }
   }
   
-  if (!rawKeys) return { key: '', source: '' };
+  const key = String(rawKey).trim();
+  if (!key) return { key: '', source: '' };
   
-  const keys = String(rawKeys).split(',').map(k => k.trim()).filter(Boolean);
-  if (keys.length === 0) return { key: '', source: '' };
-  
-  // 多 key 随机选择
-  const selected = authConfig.multiKey
-    ? keys[Math.floor(Math.random() * keys.length)]
-    : keys[0];
-  
-  return { key: selected, source };
+  return { key, source };
 }
 
 export default async function handler(req, res) {
