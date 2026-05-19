@@ -486,12 +486,60 @@
       font-size: 17px;
     }
 
-    .config-preview {
+    .diff-preview {
       margin-top: 12px;
       min-height: 420px;
       max-height: 65vh;
       overflow: auto;
-      white-space: pre;
+      border: 1px solid #cfd8e3;
+      border-radius: 8px;
+      background: #101828;
+      color: #e4e7ec;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .diff-line {
+      display: grid;
+      grid-template-columns: 38px minmax(0, 1fr);
+      min-height: 22px;
+      padding-right: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .diff-prefix {
+      padding: 0 8px;
+      color: #98a2b3;
+      user-select: none;
+      text-align: right;
+    }
+
+    .diff-content {
+      min-width: 0;
+    }
+
+    .diff-line.added {
+      background: #073b2a;
+      color: #d1fadf;
+    }
+
+    .diff-line.added .diff-prefix {
+      color: #75e0a7;
+    }
+
+    .diff-line.removed {
+      background: #4e1d1b;
+      color: #ffd6d1;
+    }
+
+    .diff-line.removed .diff-prefix {
+      color: #f97066;
+    }
+
+    .diff-line.unchanged {
+      color: #d0d5dd;
     }
 
     .result-toolbar {
@@ -746,9 +794,9 @@
             </div>
             <div class="result-summary">
               <strong id="resultSummaryTitle">完整配置已准备好</strong>
-              <span id="resultSummaryText">完整配置已生成，可在下方预览。</span>
+              <span id="resultSummaryText">完整配置已生成，可在下方查看差异。</span>
             </div>
-            <textarea id="configPreview" class="config-preview" readonly spellcheck="false" aria-label="完整配置预览"></textarea>
+            <pre id="configDiffPreview" class="diff-preview" aria-label="配置差异预览"></pre>
             <div id="resultMessage" class="message success">已生成完整配置文件，可复制或下载后替换仓库根目录的 config.json。</div>
           </div>
         </div>
@@ -1086,6 +1134,103 @@
       return nextConfig;
     }
 
+    function createLineDiff(oldText, newText) {
+      const oldLines = oldText.split('\n');
+      const newLines = newText.split('\n');
+      const table = Array.from({ length: oldLines.length + 1 }, () => {
+        return Array(newLines.length + 1).fill(0);
+      });
+
+      for (let oldIndex = oldLines.length - 1; oldIndex >= 0; oldIndex--) {
+        for (let newIndex = newLines.length - 1; newIndex >= 0; newIndex--) {
+          if (oldLines[oldIndex] === newLines[newIndex]) {
+            table[oldIndex][newIndex] = table[oldIndex + 1][newIndex + 1] + 1;
+          } else {
+            table[oldIndex][newIndex] = Math.max(
+              table[oldIndex + 1][newIndex],
+              table[oldIndex][newIndex + 1]
+            );
+          }
+        }
+      }
+
+      const diff = [];
+      let oldIndex = 0;
+      let newIndex = 0;
+
+      while (oldIndex < oldLines.length && newIndex < newLines.length) {
+        if (oldLines[oldIndex] === newLines[newIndex]) {
+          diff.push({ type: 'unchanged', text: oldLines[oldIndex] });
+          oldIndex++;
+          newIndex++;
+        } else if (table[oldIndex + 1][newIndex] >= table[oldIndex][newIndex + 1]) {
+          diff.push({ type: 'removed', text: oldLines[oldIndex] });
+          oldIndex++;
+        } else {
+          diff.push({ type: 'added', text: newLines[newIndex] });
+          newIndex++;
+        }
+      }
+
+      while (oldIndex < oldLines.length) {
+        diff.push({ type: 'removed', text: oldLines[oldIndex] });
+        oldIndex++;
+      }
+
+      while (newIndex < newLines.length) {
+        diff.push({ type: 'added', text: newLines[newIndex] });
+        newIndex++;
+      }
+
+      return diff;
+    }
+
+    function renderDiffPreview(oldConfig, newConfig) {
+      const oldText = JSON.stringify(oldConfig, null, 2);
+      const newText = JSON.stringify(newConfig, null, 2);
+      const diff = createLineDiff(oldText, newText);
+      const container = $('configDiffPreview');
+
+      container.innerHTML = '';
+
+      if (oldText === newText) {
+        const line = document.createElement('div');
+        line.className = 'diff-line unchanged';
+
+        const prefixEl = document.createElement('span');
+        prefixEl.className = 'diff-prefix';
+        prefixEl.textContent = ' ';
+
+        const contentEl = document.createElement('span');
+        contentEl.className = 'diff-content';
+        contentEl.textContent = '配置没有变化。';
+
+        line.append(prefixEl, contentEl);
+        container.appendChild(line);
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+      diff.forEach((item) => {
+        const line = document.createElement('div');
+        const prefix = item.type === 'added' ? '+' : item.type === 'removed' ? '-' : ' ';
+        line.className = `diff-line ${item.type}`;
+
+        const prefixEl = document.createElement('span');
+        prefixEl.className = 'diff-prefix';
+        prefixEl.textContent = prefix;
+
+        const contentEl = document.createElement('span');
+        contentEl.className = 'diff-content';
+        contentEl.textContent = item.text || ' ';
+
+        line.append(prefixEl, contentEl);
+        fragment.appendChild(line);
+      });
+
+      container.appendChild(fragment);
+    }
+
     function handleGenerate(event) {
       event.preventDefault();
       clearMessage($('formMessage'));
@@ -1105,7 +1250,7 @@
         const removedText = removedCount > 0 ? `删除 ${removedCount} 条` : '未删除';
         $('resultSummaryTitle').textContent = '完整配置已准备好';
         $('resultSummaryText').textContent = `${addedText}，${removedText}；可直接复制或下载。`;
-        $('configPreview').value = state.lastConfigText;
+        renderDiffPreview(state.baseConfig, nextConfig);
         $('resultEmpty').style.display = 'none';
         $('resultReady').style.display = 'block';
         showMessage($('formMessage'), 'success', '已根据当前管理操作生成完整配置。');
@@ -1119,8 +1264,8 @@
       $('resultEmpty').style.display = 'grid';
       $('resultReady').style.display = 'none';
       $('resultSummaryTitle').textContent = '完整配置已准备好';
-      $('resultSummaryText').textContent = '完整配置已生成，可在下方预览。';
-      $('configPreview').value = '';
+      $('resultSummaryText').textContent = '完整配置已生成，可在下方查看差异。';
+      $('configDiffPreview').innerHTML = '';
     }
 
     async function copyConfig() {
