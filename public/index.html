@@ -3,865 +3,962 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Proxy Manager</title>
+  <title>快速添加代理配置</title>
   <style>
     * {
+      box-sizing: border-box;
       margin: 0;
       padding: 0;
-      box-sizing: border-box;
     }
-    
+
+    :root {
+      --bg: #eef2f5;
+      --surface: #ffffff;
+      --surface-soft: #f6f8fa;
+      --text: #1f2933;
+      --muted: #667085;
+      --line: #d9e0e7;
+      --primary: #1677ff;
+      --primary-strong: #0958d9;
+      --success: #17803d;
+      --danger: #c7352c;
+      --warning: #a15c00;
+      --shadow: 0 10px 30px rgba(23, 43, 77, 0.08);
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #f5f5f5;
-      color: #333;
-      line-height: 1.6;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.5;
     }
-    
-    .container {
-      max-width: 1200px;
+
+    .app {
+      width: min(1180px, calc(100% - 32px));
       margin: 0 auto;
-      padding: 20px;
+      padding: 28px 0 36px;
     }
-    
-    header {
-      background: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+
+    .topbar {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-    }
-    
-    header h1 {
-      font-size: 24px;
-      color: #2c3e50;
-    }
-    
-    .btn {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-      transition: all 0.2s;
-    }
-    
-    .btn-primary {
-      background: #3498db;
-      color: #fff;
-    }
-    
-    .btn-primary:hover {
-      background: #2980b9;
-    }
-    
-    .btn-danger {
-      background: #e74c3c;
-      color: #fff;
-    }
-    
-    .btn-danger:hover {
-      background: #c0392b;
-    }
-    
-    .btn-success {
-      background: #2ecc71;
-      color: #fff;
-    }
-    
-    .btn-success:hover {
-      background: #27ae60;
-    }
-    
-    .btn-secondary {
-      background: #95a5a6;
-      color: #fff;
-    }
-    
-    .btn-secondary:hover {
-      background: #7f8c8d;
-    }
-    
-    .proxy-list {
-      display: grid;
-      gap: 16px;
-    }
-    
-    .proxy-card {
-      background: #fff;
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      transition: all 0.2s;
-    }
-    
-    .proxy-card:hover {
-      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-    }
-    
-    .proxy-header {
-      display: flex;
-      justify-content: space-between;
+      gap: 18px;
       align-items: flex-start;
-      margin-bottom: 16px;
+      margin-bottom: 18px;
     }
-    
-    .proxy-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: #2c3e50;
+
+    .title h1 {
+      font-size: clamp(24px, 3vw, 34px);
+      font-weight: 700;
+      letter-spacing: 0;
     }
-    
-    .proxy-domain {
-      color: #7f8c8d;
-      font-size: 14px;
+
+    .title p {
+      max-width: 720px;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 15px;
     }
-    
-    .proxy-actions {
-      display: flex;
+
+    .status {
+      display: inline-flex;
+      align-items: center;
       gap: 8px;
+      min-height: 34px;
+      padding: 7px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
     }
-    
-    .proxy-details {
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #98a2b3;
+    }
+
+    .status.ready .status-dot {
+      background: var(--success);
+    }
+
+    .status.error .status-dot {
+      background: var(--danger);
+    }
+
+    .layout {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 12px;
+      grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.1fr);
+      gap: 18px;
+      align-items: start;
     }
-    
-    .detail-item {
-      background: #f8f9fa;
-      padding: 10px 12px;
-      border-radius: 6px;
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
     }
-    
-    .detail-label {
-      font-size: 12px;
-      color: #7f8c8d;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+
+    .panel-header {
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--line);
     }
-    
-    .detail-value {
+
+    .panel-header h2 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .panel-header p {
+      margin-top: 5px;
+      color: var(--muted);
       font-size: 14px;
-      color: #2c3e50;
-      word-break: break-all;
     }
-    
-    .mode-badge {
-      display: inline-block;
-      padding: 4px 12px;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: 600;
+
+    .form {
+      padding: 20px;
     }
-    
-    .mode-simple {
-      background: #e8f5e9;
-      color: #2e7d32;
+
+    .section {
+      padding-bottom: 20px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--line);
     }
-    
-    .mode-filtered {
-      background: #fff3e0;
-      color: #ef6c00;
+
+    .section:last-of-type {
+      padding-bottom: 0;
+      margin-bottom: 0;
+      border-bottom: 0;
     }
-    
-    /* Modal Styles */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 1000;
-      justify-content: center;
-      align-items: center;
+
+    .section-title {
+      margin-bottom: 14px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #344054;
     }
-    
-    .modal-overlay.active {
-      display: flex;
+
+    .field {
+      margin-bottom: 15px;
     }
-    
-    .modal {
-      background: #fff;
-      border-radius: 12px;
-      width: 90%;
-      max-width: 600px;
-      max-height: 90vh;
-      overflow-y: auto;
-      padding: 24px;
+
+    .field:last-child {
+      margin-bottom: 0;
     }
-    
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-    }
-    
-    .modal-header h2 {
-      font-size: 20px;
-      color: #2c3e50;
-    }
-    
-    .modal-close {
-      background: none;
-      border: none;
-      font-size: 24px;
-      cursor: pointer;
-      color: #7f8c8d;
-    }
-    
-    .form-group {
-      margin-bottom: 16px;
-    }
-    
-    .form-group label {
+
+    label,
+    .field-label {
       display: block;
       margin-bottom: 6px;
-      font-weight: 500;
-      color: #2c3e50;
+      color: #344054;
+      font-size: 14px;
+      font-weight: 600;
     }
-    
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
+
+    input[type="text"],
+    input[type="url"],
+    textarea {
       width: 100%;
+      min-height: 42px;
       padding: 10px 12px;
-      border: 1px solid #ddd;
+      border: 1px solid #cfd8e3;
       border-radius: 6px;
-      font-size: 14px;
-      transition: border-color 0.2s;
-    }
-    
-    .form-group input:focus,
-    .form-group select:focus,
-    .form-group textarea:focus {
-      outline: none;
-      border-color: #3498db;
-    }
-    
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-    
-    .checkbox-group {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    
-    .checkbox-group input[type="checkbox"] {
-      width: auto;
-    }
-    
-    .modal-footer {
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
-      margin-top: 24px;
-      padding-top: 16px;
-      border-top: 1px solid #eee;
-    }
-    
-    .toast {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      padding: 12px 24px;
-      border-radius: 8px;
-      color: #fff;
-      font-size: 14px;
-      z-index: 2000;
-      animation: slideIn 0.3s ease;
-    }
-    
-    .toast-success {
-      background: #2ecc71;
-    }
-    
-    .toast-error {
-      background: #e74c3c;
-    }
-    
-    @keyframes slideIn {
-      from {
-        transform: translateX(100%);
-        opacity: 0;
-      }
-      to {
-        transform: translateX(0);
-        opacity: 1;
-      }
-    }
-    
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: #7f8c8d;
-    }
-    
-    .empty-state p {
-      margin-bottom: 20px;
-    }
-    
-    .auth-info {
-      font-size: 12px;
-      color: #7f8c8d;
-      margin-top: 4px;
-    }
-    
-    .login-container {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-    }
-    
-    .login-box {
       background: #fff;
-      padding: 40px;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-      width: 100%;
-      max-width: 400px;
-      text-align: center;
-    }
-    
-    .login-box h1 {
-      font-size: 28px;
-      color: #2c3e50;
-      margin-bottom: 8px;
-    }
-    
-    .login-subtitle {
-      color: #7f8c8d;
-      margin-bottom: 24px;
-    }
-    
-    .login-error {
-      background: #fee;
-      color: #e74c3c;
-      padding: 10px;
-      border-radius: 6px;
-      margin-top: 16px;
+      color: var(--text);
+      font: inherit;
       font-size: 14px;
-    }
-    
-    .btn-full {
-      width: 100%;
-    }
-    
-    .header-actions {
-      display: flex;
-      gap: 8px;
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
 
-    .mode-banner {
-      background: linear-gradient(135deg, #fff4d9, #ffe8b3);
-      color: #7a4b00;
-      border: 1px solid #f2cf7a;
-      border-radius: 10px;
-      padding: 14px 16px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 6px rgba(122, 75, 0, 0.08);
+    input:focus,
+    textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.15);
     }
 
-    .mode-banner strong {
+    textarea {
+      resize: vertical;
+      min-height: 340px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .hint {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .mode-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .mode-card {
+      display: block;
+      min-height: 92px;
+      padding: 12px;
+      border: 1px solid #cfd8e3;
+      border-radius: 8px;
+      background: var(--surface-soft);
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    }
+
+    .mode-card input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .mode-name {
       display: block;
       margin-bottom: 4px;
-      font-size: 15px;
+      color: #243547;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .mode-desc {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .mode-card:has(input:checked) {
+      border-color: var(--primary);
+      background: #edf5ff;
+      box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.12);
+    }
+
+    .check-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .check-row {
+      display: flex;
+      gap: 9px;
+      align-items: flex-start;
+      color: #344054;
+      font-size: 14px;
+    }
+
+    .check-row input {
+      width: 16px;
+      height: 16px;
+      margin-top: 2px;
+      accent-color: var(--primary);
+      flex: 0 0 auto;
+    }
+
+    .advanced {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface-soft);
+      overflow: hidden;
+    }
+
+    .advanced summary {
+      padding: 12px 14px;
+      cursor: pointer;
+      color: #344054;
+      font-size: 14px;
+      font-weight: 700;
+      list-style-position: inside;
+    }
+
+    .advanced-body {
+      padding: 0 14px 14px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding-top: 20px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      padding: 9px 14px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: background 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s;
+    }
+
+    .btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--primary-strong);
+    }
+
+    .btn-secondary {
+      border-color: #cfd8e3;
+      background: #fff;
+      color: #344054;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #f3f6f9;
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: #fff;
+    }
+
+    .btn-success:hover:not(:disabled) {
+      background: #126c32;
+    }
+
+    .result {
+      padding: 20px;
+    }
+
+    .result-empty {
+      display: grid;
+      min-height: 420px;
+      place-items: center;
+      padding: 28px;
+      border: 1px dashed #b8c4d2;
+      border-radius: 8px;
+      background: var(--surface-soft);
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .result-empty strong {
+      display: block;
+      margin-bottom: 6px;
+      color: #344054;
+      font-size: 16px;
+    }
+
+    .result-ready {
+      display: none;
+    }
+
+    .result-summary {
+      display: grid;
+      min-height: 340px;
+      align-content: center;
+      gap: 8px;
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface-soft);
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .result-summary strong {
+      color: #344054;
+      font-size: 17px;
+    }
+
+    .result-toolbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .result-toolbar h3 {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .result-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .message {
+      display: none;
+      margin-top: 14px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+
+    .message.error {
+      display: block;
+      border: 1px solid #ffd0cc;
+      background: #fff1f0;
+      color: var(--danger);
+    }
+
+    .message.warning {
+      display: block;
+      border: 1px solid #ffdca8;
+      background: #fff7e6;
+      color: var(--warning);
+    }
+
+    .message.success {
+      display: block;
+      border: 1px solid #bce8ca;
+      background: #eefaf2;
+      color: var(--success);
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      max-width: min(360px, calc(100vw - 36px));
+      padding: 12px 14px;
+      border-radius: 8px;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.15);
+      background: #243547;
+      color: #fff;
+      font-size: 14px;
+      z-index: 20;
     }
 
     .hidden {
       display: none !important;
     }
+
+    @media (max-width: 900px) {
+      .topbar {
+        flex-direction: column;
+      }
+
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .status {
+        white-space: normal;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .app {
+        width: min(100% - 20px, 1180px);
+        padding-top: 16px;
+      }
+
+      .field-grid,
+      .mode-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .panel-header,
+      .form,
+      .result {
+        padding: 16px;
+      }
+
+      .result-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .result-buttons,
+      .actions {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <!-- Login Page -->
-    <div id="loginPage" style="display: none;">
-      <div class="login-container">
-        <div class="login-box">
-          <h1>🔐 Proxy Manager</h1>
-          <p class="login-subtitle">Enter admin password to continue</p>
-          <form onsubmit="handleLogin(event)">
-            <div class="form-group">
-              <input type="password" id="loginPassword" placeholder="Password" required autofocus>
-            </div>
-            <button type="submit" class="btn btn-primary btn-full">Login</button>
-          </form>
-          <div id="loginError" class="login-error" style="display: none;"></div>
-        </div>
+  <main class="app">
+    <div class="topbar">
+      <div class="title">
+        <h1>快速添加代理配置</h1>
+        <p>页面会先读取当前反代配置作为基础，但不会展示已有条目。填写一条新的代理规则后，可复制或下载合并后的完整 config.json。</p>
+      </div>
+      <div id="configStatus" class="status">
+        <span class="status-dot"></span>
+        <span id="configStatusText">正在读取基础配置</span>
       </div>
     </div>
-    
-    <!-- Main Page -->
-    <div id="mainPage" style="display: none;">
-      <div id="modeBanner" class="mode-banner hidden"></div>
-      <header>
-        <h1>🔧 Proxy Manager</h1>
-        <div class="header-actions">
-          <button id="addProxyButton" class="btn btn-primary" onclick="openAddModal()">+ Add Proxy</button>
-          <button id="logoutButton" class="btn btn-secondary" onclick="logout()">Logout</button>
+
+    <div class="layout">
+      <section class="panel" aria-labelledby="formTitle">
+        <div class="panel-header">
+          <h2 id="formTitle">新增代理规则</h2>
+          <p>按实际目标填写域名和上游地址，其他选项已按常见代理场景预设。</p>
         </div>
-      </header>
-      
-      <div id="proxyList" class="proxy-list">
-        <div class="empty-state">
-          <p>Loading...</p>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <!-- Add/Edit Modal -->
-  <div id="proxyModal" class="modal-overlay">
-    <div class="modal">
-      <div class="modal-header">
-        <h2 id="modalTitle">Add Proxy</h2>
-        <button class="modal-close" onclick="closeModal()">&times;</button>
-      </div>
-      
-      <form id="proxyForm" onsubmit="saveProxy(event)">
-        <input type="hidden" id="editIndex" value="-1">
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label>Name</label>
-            <input type="text" id="proxyName" placeholder="e.g., gemini" required>
-          </div>
-          <div class="form-group">
-            <label>Mode</label>
-            <select id="proxyMode" onchange="toggleModeFields()">
-              <option value="simple">Simple</option>
-              <option value="filtered">Filtered</option>
-            </select>
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label>Domain (for URL routing)</label>
-          <input type="text" id="proxyDomain" placeholder="e.g., generativelanguage.googleapis.com" required>
-        </div>
-        
-        <div class="form-group">
-          <label>Target URL</label>
-          <input type="text" id="proxyTarget" placeholder="e.g., https://generativelanguage.googleapis.com" required>
-        </div>
-        
-        <!-- Filtered Mode Fields -->
-        <div id="filteredFields">
-          <div class="form-group">
-            <label>Auth Type</label>
-            <select id="authType" onchange="toggleAuthFields()">
-              <option value="">None</option>
-              <option value="api-key">API Key</option>
-            </select>
-          </div>
-          
-          <div id="authFields" style="display: none;">
-            <div class="form-group">
-              <label>Key Sources (comma-separated)</label>
-              <input type="text" id="authSources" placeholder="e.g., x-goog-api-key, authorization-bearer" value="x-goog-api-key, authorization-bearer">
-              <div class="auth-info">Supported: x-goog-api-key, authorization-bearer</div>
-            </div>
-            <div class="form-group">
-              <div class="checkbox-group">
-                <input type="checkbox" id="authMultiKey" checked>
-                <label for="authMultiKey">Enable multi-key random selection</label>
+
+        <form id="proxyForm" class="form">
+          <div class="section">
+            <div class="section-title">1. 基础信息</div>
+            <div class="field-grid">
+              <div class="field">
+                <label for="proxyName">配置名称</label>
+                <input type="text" id="proxyName" autocomplete="off" placeholder="gemini" required>
+                <div class="hint">用于在配置中识别这条规则。</div>
+              </div>
+              <div class="field">
+                <label for="proxyDomain">匹配域名</label>
+                <input type="text" id="proxyDomain" autocomplete="off" placeholder="generativelanguage.googleapis.com" required>
+                <div class="hint">只填写域名，不包含 http:// 或路径。</div>
               </div>
             </div>
-          </div>
-          
-          <div class="form-group">
-            <div class="checkbox-group">
-              <input type="checkbox" id="forwardedHeaders" checked>
-              <label for="forwardedHeaders">Forward X-Forwarded-For headers</label>
+            <div class="field">
+              <label for="proxyTarget">上游目标地址</label>
+              <input type="url" id="proxyTarget" autocomplete="off" placeholder="https://generativelanguage.googleapis.com" required>
+              <div class="hint">填写协议和域名，可包含端口；末尾斜杠会自动整理。</div>
             </div>
           </div>
-        </div>
-        
-        <div class="form-group">
-          <label>Remove Request Headers (comma-separated)</label>
-          <input type="text" id="removeReqHeaders" placeholder="e.g., host, content-length">
-        </div>
-        
-        <div class="form-group">
-          <label>Remove Response Headers (comma-separated)</label>
-          <input type="text" id="removeResHeaders" placeholder="e.g., content-encoding, transfer-encoding">
-        </div>
-        
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-          <button type="submit" class="btn btn-success">Save</button>
-        </div>
-      </form>
-    </div>
-  </div>
-  
-  <script>
-    let config = { proxies: [] };
-    let authToken = localStorage.getItem('proxyAuthToken');
-    let isReadOnly = false;
-    
-    // Check auth status and show appropriate page
-    async function checkAuth() {
-      await loadConfig();
-      updateReadOnlyUI();
 
-      if (isReadOnly) {
-        showMainPage();
-        return;
-      }
-
-      if (authToken) {
-        showMainPage();
-      } else {
-        showLoginPage();
-      }
-    }
-    
-    function showLoginPage() {
-      document.getElementById('loginPage').style.display = 'block';
-      document.getElementById('mainPage').style.display = 'none';
-    }
-    
-    function showMainPage() {
-      document.getElementById('loginPage').style.display = 'none';
-      document.getElementById('mainPage').style.display = 'block';
-    }
-    
-    // Handle login
-    async function handleLogin(event) {
-      event.preventDefault();
-      const password = document.getElementById('loginPassword').value;
-      const errorEl = document.getElementById('loginError');
-      
-      try {
-        const res = await fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password })
-        });
-        
-        const data = await res.json();
-        
-        if (res.ok && data.success) {
-          authToken = data.token;
-          localStorage.setItem('proxyAuthToken', authToken);
-          errorEl.style.display = 'none';
-          showMainPage();
-          await loadConfig();
-        } else {
-          errorEl.textContent = data.error || 'Login failed';
-          errorEl.style.display = 'block';
-        }
-      } catch (err) {
-        errorEl.textContent = 'Connection error';
-        errorEl.style.display = 'block';
-      }
-    }
-    
-    // Logout
-    function logout() {
-      authToken = null;
-      localStorage.removeItem('proxyAuthToken');
-      showLoginPage();
-    }
-    
-    // Load config on page load
-    async function loadConfig() {
-      try {
-        const res = await fetch('/api/config');
-        isReadOnly = res.headers.get('X-Config-Editable') !== 'true';
-        config = await res.json();
-        renderProxyList();
-      } catch (err) {
-        showToast('Failed to load config', 'error');
-      }
-    }
-
-    function updateReadOnlyUI() {
-      const banner = document.getElementById('modeBanner');
-      const addButton = document.getElementById('addProxyButton');
-      const logoutButton = document.getElementById('logoutButton');
-
-      if (isReadOnly) {
-        banner.classList.remove('hidden');
-        banner.innerHTML = `
-          <strong>Cloud read-only mode</strong>
-          <span>This page can view the current config, but editing is only enabled when accessed from localhost.</span>
-        `;
-        addButton.classList.add('hidden');
-        logoutButton.classList.add('hidden');
-      } else {
-        banner.classList.add('hidden');
-        banner.innerHTML = '';
-        addButton.classList.remove('hidden');
-        logoutButton.classList.remove('hidden');
-      }
-    }
-    
-    // Render proxy list
-    function renderProxyList() {
-      const container = document.getElementById('proxyList');
-      
-      if (config.proxies.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <p>${isReadOnly ? 'No proxies configured.' : 'No proxies configured yet.'}</p>
-            ${isReadOnly ? '' : '<button class="btn btn-primary" onclick="openAddModal()">Add Your First Proxy</button>'}
+          <div class="section">
+            <div class="section-title">2. 代理模式</div>
+            <div class="mode-grid" role="radiogroup" aria-label="代理模式">
+              <label class="mode-card">
+                <input type="radio" name="proxyMode" value="filtered" checked>
+                <span class="mode-name">过滤模式</span>
+                <span class="mode-desc">适合 API 代理，可处理 API Key、Host、Origin 和转发头。</span>
+              </label>
+              <label class="mode-card">
+                <input type="radio" name="proxyMode" value="simple">
+                <span class="mode-name">简单模式</span>
+                <span class="mode-desc">适合普通反代，只移除常见冲突请求头和响应头。</span>
+              </label>
+            </div>
           </div>
-        `;
-        return;
-      }
-      
-      container.innerHTML = config.proxies.map((proxy, index) => `
-        <div class="proxy-card">
-          <div class="proxy-header">
+
+          <div id="filteredOptions" class="section">
+            <div class="section-title">3. 过滤模式选项</div>
+            <div class="check-list">
+              <label class="check-row">
+                <input type="checkbox" id="apiKeyAuth" checked>
+                <span>从 x-goog-api-key 或 Authorization Bearer 中读取 API Key</span>
+              </label>
+              <label class="check-row">
+                <input type="checkbox" id="multiKey" checked>
+                <span>传入多个 Key 时随机选择一个</span>
+              </label>
+              <label class="check-row">
+                <input type="checkbox" id="forwardedHeaders" checked>
+                <span>保留 X-Forwarded-For 和 X-Forwarded-Proto</span>
+              </label>
+              <label class="check-row">
+                <input type="checkbox" id="targetHeaderTemplates" checked>
+                <span>将 Host、Origin、Referer 设置为上游目标</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="section">
+            <details class="advanced">
+              <summary>高级头部设置</summary>
+              <div class="advanced-body">
+                <div class="field">
+                  <label for="removeReqHeaders">移除请求头</label>
+                  <input type="text" id="removeReqHeaders" autocomplete="off">
+                  <div class="hint">多个值用英文逗号分隔。</div>
+                </div>
+                <div class="field">
+                  <label for="removeResHeaders">移除响应头</label>
+                  <input type="text" id="removeResHeaders" autocomplete="off">
+                  <div class="hint">多个值用英文逗号分隔。</div>
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <div class="actions">
+            <button id="generateButton" type="submit" class="btn btn-primary" disabled>生成完整配置</button>
+            <button type="button" class="btn btn-secondary" id="resetButton">清空表单</button>
+          </div>
+          <div id="formMessage" class="message" role="alert"></div>
+        </form>
+      </section>
+
+      <section class="panel" aria-labelledby="resultTitle">
+        <div class="panel-header">
+          <h2 id="resultTitle">完整 config.json</h2>
+          <p>生成后会把新规则追加到已读取的基础配置中。</p>
+        </div>
+
+        <div class="result">
+          <div id="resultEmpty" class="result-empty">
             <div>
-              <div class="proxy-title">${escapeHtml(proxy.name)}</div>
-              <div class="proxy-domain">${escapeHtml(proxy.domain)}</div>
+              <strong>等待生成</strong>
+              <span>填写左侧表单后，完整配置会出现在这里。</span>
             </div>
-            ${isReadOnly ? '' : `
-              <div class="proxy-actions">
-                <button class="btn btn-secondary" onclick="editProxy(${index})">Edit</button>
-                <button class="btn btn-danger" onclick="deleteProxy(${index})">Delete</button>
-              </div>
-            `}
           </div>
-          <div class="proxy-details">
-            <div class="detail-item">
-              <div class="detail-label">Target</div>
-              <div class="detail-value">${escapeHtml(proxy.target)}</div>
-            </div>
-            <div class="detail-item">
-              <div class="detail-label">Mode</div>
-              <div class="detail-value">
-                <span class="mode-badge mode-${proxy.mode}">${proxy.mode}</span>
+
+          <div id="resultReady" class="result-ready">
+            <div class="result-toolbar">
+              <h3>已合并的新配置</h3>
+              <div class="result-buttons">
+                <button type="button" class="btn btn-success" id="copyButton">复制完整配置</button>
+                <button type="button" class="btn btn-secondary" id="downloadButton">下载 config.json</button>
               </div>
             </div>
-            <div class="detail-item">
-              <div class="detail-label">Auth</div>
-              <div class="detail-value">${proxy.auth ? proxy.auth.type : 'None'}</div>
+            <div class="result-summary">
+              <strong id="resultSummaryTitle">完整配置已准备好</strong>
+              <span id="resultSummaryText">新代理规则已追加，已有配置内容不会在页面中展示。</span>
             </div>
-            <div class="detail-item">
-              <div class="detail-label">Forwarded Headers</div>
-              <div class="detail-value">${proxy.forwardedHeaders ? 'Yes' : 'No'}</div>
-            </div>
+            <div id="resultMessage" class="message success">已生成完整配置文件，可复制或下载后替换仓库根目录的 config.json。</div>
           </div>
         </div>
-      `).join('');
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const DEFAULT_HEADERS = {
+      filtered: {
+        removeRequest: 'x-goog-api-key, authorization',
+        removeResponse: 'content-encoding, transfer-encoding, connection, strict-transport-security'
+      },
+      simple: {
+        removeRequest: 'host, content-length, connection',
+        removeResponse: 'content-encoding, content-length, transfer-encoding, connection'
+      }
+    };
+
+    const state = {
+      baseConfig: null,
+      configLoaded: false,
+      lastConfigText: '',
+      lastAppliedMode: 'filtered'
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    const form = $('proxyForm');
+    const modeInputs = Array.from(document.querySelectorAll('input[name="proxyMode"]'));
+    const removeReqHeaders = $('removeReqHeaders');
+    const removeResHeaders = $('removeResHeaders');
+
+    async function loadBaseConfig() {
+      setStatus('正在读取基础配置');
+      setFormEnabled(false);
+
+      try {
+        const response = await fetch('/api/config', { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        state.baseConfig = normalizeConfig(data);
+        state.configLoaded = true;
+        setStatus('基础配置已读取', 'ready');
+        setFormEnabled(true);
+        clearMessage($('formMessage'));
+      } catch (error) {
+        state.configLoaded = false;
+        setStatus('基础配置读取失败', 'error');
+        showMessage($('formMessage'), 'error', '无法读取当前配置，请确认 /api/config 可访问后刷新页面。');
+      }
     }
-    
-    // Open add modal
-    function openAddModal() {
-      if (isReadOnly) {
-        showToast('Cloud mode is read-only', 'error');
-        return;
+
+    function normalizeConfig(config) {
+      const normalized = config && typeof config === 'object'
+        ? JSON.parse(JSON.stringify(config))
+        : {};
+
+      if (!Array.isArray(normalized.proxies)) {
+        normalized.proxies = [];
       }
 
-      document.getElementById('editIndex').value = -1;
-      document.getElementById('modalTitle').textContent = 'Add Proxy';
-      document.getElementById('proxyForm').reset();
-      document.getElementById('authMultiKey').checked = true;
-      document.getElementById('forwardedHeaders').checked = true;
-      toggleModeFields();
-      toggleAuthFields();
-      document.getElementById('proxyModal').classList.add('active');
+      return normalized;
     }
-    
-    // Edit proxy
-    function editProxy(index) {
-      if (isReadOnly) {
-        showToast('Cloud mode is read-only', 'error');
-        return;
+
+    function setStatus(text, type = '') {
+      const status = $('configStatus');
+      $('configStatusText').textContent = text;
+      status.classList.remove('ready', 'error');
+      if (type) {
+        status.classList.add(type);
+      }
+    }
+
+    function setFormEnabled(enabled) {
+      $('generateButton').disabled = !enabled;
+    }
+
+    function getMode() {
+      return modeInputs.find((input) => input.checked)?.value || 'filtered';
+    }
+
+    function syncModeUI(forceDefaults = false) {
+      const mode = getMode();
+      $('filteredOptions').classList.toggle('hidden', mode !== 'filtered');
+
+      const previousDefaults = DEFAULT_HEADERS[state.lastAppliedMode];
+      const nextDefaults = DEFAULT_HEADERS[mode];
+
+      if (
+        forceDefaults ||
+        !removeReqHeaders.value.trim() ||
+        removeReqHeaders.value.trim() === previousDefaults.removeRequest
+      ) {
+        removeReqHeaders.value = nextDefaults.removeRequest;
       }
 
-      const proxy = config.proxies[index];
-      document.getElementById('editIndex').value = index;
-      document.getElementById('modalTitle').textContent = 'Edit Proxy';
-      
-      document.getElementById('proxyName').value = proxy.name;
-      document.getElementById('proxyDomain').value = proxy.domain;
-      document.getElementById('proxyTarget').value = proxy.target;
-      document.getElementById('proxyMode').value = proxy.mode;
-      
-      if (proxy.auth) {
-        document.getElementById('authType').value = proxy.auth.type || '';
-        document.getElementById('authSources').value = (proxy.auth.sources || []).join(', ');
-        document.getElementById('authMultiKey').checked = proxy.auth.multiKey !== false;
-      } else {
-        document.getElementById('authType').value = '';
+      if (
+        forceDefaults ||
+        !removeResHeaders.value.trim() ||
+        removeResHeaders.value.trim() === previousDefaults.removeResponse
+      ) {
+        removeResHeaders.value = nextDefaults.removeResponse;
       }
-      
-      document.getElementById('forwardedHeaders').checked = proxy.forwardedHeaders !== false;
-      document.getElementById('removeReqHeaders').value = (proxy.headers?.removeRequest || []).join(', ');
-      document.getElementById('removeResHeaders').value = (proxy.headers?.removeResponse || []).join(', ');
-      
-      toggleModeFields();
-      toggleAuthFields();
-      document.getElementById('proxyModal').classList.add('active');
-    }
-    
-    // Close modal
-    function closeModal() {
-      document.getElementById('proxyModal').classList.remove('active');
-    }
-    
-    // Toggle mode-specific fields
-    function toggleModeFields() {
-      const mode = document.getElementById('proxyMode').value;
-      document.getElementById('filteredFields').style.display = mode === 'filtered' ? 'block' : 'none';
-    }
-    
-    // Toggle auth fields
-    function toggleAuthFields() {
-      const authType = document.getElementById('authType').value;
-      document.getElementById('authFields').style.display = authType ? 'block' : 'none';
-    }
-    
-    // Save proxy
-    async function saveProxy(event) {
-      event.preventDefault();
 
-      if (isReadOnly) {
-        showToast('Cloud mode is read-only', 'error');
-        return;
+      state.lastAppliedMode = mode;
+    }
+
+    function parseCSV(value) {
+      return value
+        .split(',')
+        .map((item) => item.trim().toLowerCase())
+        .filter(Boolean);
+    }
+
+    function normalizeDomain(value) {
+      return value
+        .trim()
+        .replace(/^https?:\/\//i, '')
+        .replace(/\/.*$/, '')
+        .replace(/:\d+$/, '')
+        .toLowerCase();
+    }
+
+    function normalizeTarget(value) {
+      const trimmed = value.trim();
+      if (!trimmed) return '';
+
+      const url = new URL(trimmed);
+      if (!['http:', 'https:'].includes(url.protocol)) {
+        throw new Error('上游目标地址必须使用 http 或 https。');
       }
-      
-      const editIndex = parseInt(document.getElementById('editIndex').value);
-      const mode = document.getElementById('proxyMode').value;
-      
+
+      const normalized = url.toString();
+      return normalized.endsWith('/') ? normalized.slice(0, -1) : normalized;
+    }
+
+    function validateProxyInput() {
+      const name = $('proxyName').value.trim();
+      const domain = normalizeDomain($('proxyDomain').value);
+      let target = '';
+
+      if (!name) {
+        throw new Error('请填写配置名称。');
+      }
+
+      if (!domain) {
+        throw new Error('请填写匹配域名。');
+      }
+
+      if (domain.includes('/') || domain.includes('://')) {
+        throw new Error('匹配域名只需要域名本身，不要包含协议或路径。');
+      }
+
+      try {
+        target = normalizeTarget($('proxyTarget').value);
+      } catch (error) {
+        throw new Error(error.message || '请填写有效的上游目标地址。');
+      }
+
+      if (!target) {
+        throw new Error('请填写上游目标地址。');
+      }
+
+      const duplicate = state.baseConfig.proxies.find((proxy) => {
+        const proxyName = String(proxy.name || '').trim().toLowerCase();
+        const proxyDomain = String(proxy.domain || '').trim().toLowerCase();
+        return proxyName === name.toLowerCase() || proxyDomain === domain;
+      });
+
+      if (duplicate) {
+        throw new Error('配置名称或匹配域名已存在。已有条目不会在页面展示，请换一个名称或域名。');
+      }
+
+      return { name, domain, target };
+    }
+
+    function buildProxy() {
+      const base = validateProxyInput();
+      const mode = getMode();
       const proxy = {
-        name: document.getElementById('proxyName').value.trim(),
-        domain: document.getElementById('proxyDomain').value.trim(),
-        target: document.getElementById('proxyTarget').value.trim(),
-        mode: mode,
+        name: base.name,
+        domain: base.domain,
+        target: base.target,
+        mode,
         auth: null,
         headers: {
-          removeRequest: parseCSV(document.getElementById('removeReqHeaders').value),
-          removeResponse: parseCSV(document.getElementById('removeResHeaders').value)
+          removeRequest: parseCSV(removeReqHeaders.value),
+          removeResponse: parseCSV(removeResHeaders.value)
         },
-        forwardedHeaders: mode === 'filtered' ? document.getElementById('forwardedHeaders').checked : false
+        forwardedHeaders: false
       };
-      
-      // Set auth config for filtered mode
-      if (mode === 'filtered' && document.getElementById('authType').value) {
-        proxy.auth = {
-          type: document.getElementById('authType').value,
-          sources: parseCSV(document.getElementById('authSources').value),
-          multiKey: document.getElementById('authMultiKey').checked
-        };
-      }
-      
-      // Update or add
-      if (editIndex >= 0) {
-        config.proxies[editIndex] = proxy;
-      } else {
-        config.proxies.push(proxy);
-      }
-      
-      // Save to server
-      try {
-        const res = await fetch('/api/config', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`
-          },
-          body: JSON.stringify(config)
-        });
-        
-        if (res.ok) {
-          showToast('Proxy saved successfully', 'success');
-          closeModal();
-          renderProxyList();
-        } else if (res.status === 401) {
-          showToast('Session expired, please login again', 'error');
-          logout();
-        } else {
-          const err = await res.json();
-          showToast(err.error || 'Failed to save', 'error');
+
+      if (mode === 'filtered') {
+        proxy.forwardedHeaders = $('forwardedHeaders').checked;
+
+        if ($('apiKeyAuth').checked) {
+          proxy.auth = {
+            type: 'api-key',
+            sources: ['x-goog-api-key', 'authorization-bearer'],
+            multiKey: $('multiKey').checked
+          };
         }
-      } catch (err) {
-        showToast('Failed to save config', 'error');
+
+        if ($('targetHeaderTemplates').checked) {
+          proxy.headers.set = {
+            host: '{target_hostname}',
+            origin: '{target_origin}',
+            referer: '{target_url}'
+          };
+        }
       }
+
+      return proxy;
     }
-    
-    // Delete proxy
-    async function deleteProxy(index) {
-      if (isReadOnly) {
-        showToast('Cloud mode is read-only', 'error');
+
+    function createMergedConfig(proxy) {
+      const nextConfig = normalizeConfig(state.baseConfig);
+      nextConfig.proxies.push(proxy);
+      return nextConfig;
+    }
+
+    function handleGenerate(event) {
+      event.preventDefault();
+      clearMessage($('formMessage'));
+
+      if (!state.configLoaded) {
+        showMessage($('formMessage'), 'error', '基础配置尚未读取完成，请稍后再试。');
         return;
       }
 
-      const proxy = config.proxies[index];
-      if (!confirm(`Delete proxy "${proxy.name}"?`)) return;
-      
-      config.proxies.splice(index, 1);
-      
       try {
-        const res = await fetch('/api/config', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`
-          },
-          body: JSON.stringify(config)
-        });
-        
-        if (res.ok) {
-          showToast('Proxy deleted', 'success');
-          renderProxyList();
-        } else if (res.status === 401) {
-          showToast('Session expired, please login again', 'error');
-          logout();
-        } else {
-          showToast('Failed to delete', 'error');
-          loadConfig();
-        }
-      } catch (err) {
-        showToast('Failed to delete', 'error');
-        loadConfig();
+        const proxy = buildProxy();
+        const nextConfig = createMergedConfig(proxy);
+        state.lastConfigText = JSON.stringify(nextConfig, null, 2);
+
+        $('resultSummaryTitle').textContent = `已添加 ${proxy.name}`;
+        $('resultSummaryText').textContent = '完整配置已在浏览器内生成，可直接复制或下载。';
+        $('resultEmpty').style.display = 'none';
+        $('resultReady').style.display = 'block';
+        showMessage($('formMessage'), 'success', '已把新代理规则合并到完整配置中。');
+      } catch (error) {
+        showMessage($('formMessage'), 'error', error.message || '生成失败，请检查填写内容。');
       }
     }
-    
-    // Parse comma-separated values
-    function parseCSV(str) {
-      return str.split(',').map(s => s.trim()).filter(Boolean);
+
+    async function copyConfig() {
+      if (!state.lastConfigText) return;
+
+      try {
+        await navigator.clipboard.writeText(state.lastConfigText);
+        showToast('完整配置已复制');
+      } catch {
+        const fallback = document.createElement('textarea');
+        fallback.value = state.lastConfigText;
+        fallback.setAttribute('readonly', '');
+        fallback.style.position = 'fixed';
+        fallback.style.left = '-9999px';
+        document.body.appendChild(fallback);
+        fallback.select();
+        document.execCommand('copy');
+        fallback.remove();
+        showToast('完整配置已复制');
+      }
     }
-    
-    // Escape HTML
-    function escapeHtml(str) {
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
+
+    function downloadConfig() {
+      if (!state.lastConfigText) return;
+
+      const blob = new Blob([state.lastConfigText], { type: 'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'config.json';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      showToast('config.json 已开始下载');
     }
-    
-    // Show toast notification
-    function showToast(message, type = 'success') {
+
+    function resetForm() {
+      form.reset();
+      state.lastConfigText = '';
+      state.lastAppliedMode = 'filtered';
+      syncModeUI(true);
+      clearMessage($('formMessage'));
+      $('resultEmpty').style.display = 'grid';
+      $('resultReady').style.display = 'none';
+      $('resultSummaryTitle').textContent = '完整配置已准备好';
+      $('resultSummaryText').textContent = '新代理规则已追加，已有配置内容不会在页面中展示。';
+    }
+
+    function showMessage(element, type, text) {
+      element.className = `message ${type}`;
+      element.textContent = text;
+    }
+
+    function clearMessage(element) {
+      element.className = 'message';
+      element.textContent = '';
+    }
+
+    function showToast(text) {
       const toast = document.createElement('div');
-      toast.className = `toast toast-${type}`;
-      toast.textContent = message;
+      toast.className = 'toast';
+      toast.textContent = text;
       document.body.appendChild(toast);
-      
-      setTimeout(() => {
-        toast.remove();
-      }, 3000);
+      setTimeout(() => toast.remove(), 2400);
     }
-    
-    // Check auth on page load
-    checkAuth();
+
+    modeInputs.forEach((input) => {
+      input.addEventListener('change', () => syncModeUI());
+    });
+
+    form.addEventListener('submit', handleGenerate);
+    $('resetButton').addEventListener('click', resetForm);
+    $('copyButton').addEventListener('click', copyConfig);
+    $('downloadButton').addEventListener('click', downloadConfig);
+
+    syncModeUI(true);
+    loadBaseConfig();
   </script>
 </body>
 </html>
