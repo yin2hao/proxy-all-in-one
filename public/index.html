@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>快速添加代理配置</title>
+  <title>代理配置管理器</title>
   <style>
     * {
       box-sizing: border-box;
@@ -197,6 +197,89 @@
       font-size: 12px;
     }
 
+    .section-heading {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .section-heading .section-title {
+      margin-bottom: 0;
+    }
+
+    .config-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .config-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid #cfd8e3;
+      border-radius: 8px;
+      background: var(--surface-soft);
+    }
+
+    .config-row.is-deleted {
+      border-color: #f2b8b5;
+      background: #fff7f6;
+    }
+
+    .config-row.is-deleted .config-info {
+      opacity: 0.68;
+      text-decoration: line-through;
+      text-decoration-thickness: 1px;
+    }
+
+    .config-title-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .config-title {
+      color: #243547;
+      font-size: 14px;
+      font-weight: 700;
+      word-break: break-word;
+    }
+
+    .config-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #e8edf3;
+      color: #475467;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .config-meta {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      word-break: break-all;
+    }
+
+    .config-empty {
+      padding: 16px;
+      border: 1px dashed #b8c4d2;
+      border-radius: 8px;
+      background: var(--surface-soft);
+      color: var(--muted);
+      font-size: 14px;
+      text-align: center;
+    }
+
     .field-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -343,6 +426,21 @@
       background: #126c32;
     }
 
+    .btn-danger {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: #a92d26;
+    }
+
+    .btn-small {
+      min-height: 34px;
+      padding: 6px 10px;
+      font-size: 13px;
+    }
+
     .result {
       padding: 20px;
     }
@@ -476,7 +574,8 @@
       }
 
       .field-grid,
-      .mode-grid {
+      .mode-grid,
+      .config-row {
         grid-template-columns: 1fr;
       }
 
@@ -506,8 +605,8 @@
   <main class="app">
     <div class="topbar">
       <div class="title">
-        <h1>快速添加代理配置</h1>
-        <p>页面会先读取当前反代配置作为基础，但不会展示已有条目。填写一条新的代理规则后，可复制或下载合并后的完整 config.json。</p>
+        <h1>代理配置管理器</h1>
+        <p>页面会读取当前反代配置作为基础。你可以标记删除已有规则，也可以新增一条规则，然后复制或下载处理后的完整 config.json。</p>
       </div>
       <div id="configStatus" class="status">
         <span class="status-dot"></span>
@@ -518,34 +617,45 @@
     <div class="layout">
       <section class="panel" aria-labelledby="formTitle">
         <div class="panel-header">
-          <h2 id="formTitle">新增代理规则</h2>
-          <p>按实际目标填写域名和上游地址，其他选项已按常见代理场景预设。</p>
+          <h2 id="formTitle">管理代理规则</h2>
+          <p>删除操作只会影响生成出的配置文件，不会直接修改服务器上的 config.json。</p>
         </div>
 
         <form id="proxyForm" class="form">
           <div class="section">
-            <div class="section-title">1. 基础信息</div>
+            <div class="section-heading">
+              <div class="section-title">1. 当前配置</div>
+              <button type="button" class="btn btn-secondary btn-small" id="undoDeletesButton" disabled>撤销删除</button>
+            </div>
+            <div id="configList" class="config-list">
+              <div class="config-empty">正在读取当前配置...</div>
+            </div>
+            <div class="hint">列表只显示识别信息，删除后请点击“生成完整配置”拿到新的 config.json。</div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">2. 新增代理规则</div>
             <div class="field-grid">
               <div class="field">
                 <label for="proxyName">配置名称</label>
-                <input type="text" id="proxyName" autocomplete="off" placeholder="gemini" required>
-                <div class="hint">用于在配置中识别这条规则。</div>
+                <input type="text" id="proxyName" autocomplete="off" placeholder="gemini">
+                <div class="hint">留空则只处理删除，不新增配置。</div>
               </div>
               <div class="field">
                 <label for="proxyDomain">匹配域名</label>
-                <input type="text" id="proxyDomain" autocomplete="off" placeholder="generativelanguage.googleapis.com" required>
+                <input type="text" id="proxyDomain" autocomplete="off" placeholder="generativelanguage.googleapis.com">
                 <div class="hint">只填写域名，不包含 http:// 或路径。</div>
               </div>
             </div>
             <div class="field">
               <label for="proxyTarget">上游目标地址</label>
-              <input type="url" id="proxyTarget" autocomplete="off" placeholder="https://generativelanguage.googleapis.com" required>
+              <input type="url" id="proxyTarget" autocomplete="off" placeholder="https://generativelanguage.googleapis.com">
               <div class="hint">填写协议和域名，可包含端口；末尾斜杠会自动整理。</div>
             </div>
           </div>
 
           <div class="section">
-            <div class="section-title">2. 代理模式</div>
+            <div class="section-title">3. 代理模式</div>
             <div class="mode-grid" role="radiogroup" aria-label="代理模式">
               <label class="mode-card">
                 <input type="radio" name="proxyMode" value="filtered" checked>
@@ -561,7 +671,7 @@
           </div>
 
           <div id="filteredOptions" class="section">
-            <div class="section-title">3. 过滤模式选项</div>
+            <div class="section-title">4. 过滤模式选项</div>
             <div class="check-list">
               <label class="check-row">
                 <input type="checkbox" id="apiKeyAuth" checked>
@@ -611,20 +721,20 @@
       <section class="panel" aria-labelledby="resultTitle">
         <div class="panel-header">
           <h2 id="resultTitle">完整 config.json</h2>
-          <p>生成后会把新规则追加到已读取的基础配置中。</p>
+          <p>生成后会输出包含新增和删除结果的完整配置文件。</p>
         </div>
 
         <div class="result">
           <div id="resultEmpty" class="result-empty">
             <div>
               <strong>等待生成</strong>
-              <span>填写左侧表单后，完整配置会出现在这里。</span>
+              <span>调整左侧配置后，点击生成即可复制或下载完整文件。</span>
             </div>
           </div>
 
           <div id="resultReady" class="result-ready">
             <div class="result-toolbar">
-              <h3>已合并的新配置</h3>
+              <h3>配置文件已准备好</h3>
               <div class="result-buttons">
                 <button type="button" class="btn btn-success" id="copyButton">复制完整配置</button>
                 <button type="button" class="btn btn-secondary" id="downloadButton">下载 config.json</button>
@@ -632,7 +742,7 @@
             </div>
             <div class="result-summary">
               <strong id="resultSummaryTitle">完整配置已准备好</strong>
-              <span id="resultSummaryText">新代理规则已追加，已有配置内容不会在页面中展示。</span>
+              <span id="resultSummaryText">完整配置已生成，配置内容不会在页面中展示。</span>
             </div>
             <div id="resultMessage" class="message success">已生成完整配置文件，可复制或下载后替换仓库根目录的 config.json。</div>
           </div>
@@ -656,6 +766,8 @@
     const state = {
       baseConfig: null,
       configLoaded: false,
+      configLoadFailed: false,
+      deletedProxyKeys: new Set(),
       lastConfigText: '',
       lastAppliedMode: 'filtered'
     };
@@ -680,12 +792,17 @@
         const data = await response.json();
         state.baseConfig = normalizeConfig(data);
         state.configLoaded = true;
+        state.configLoadFailed = false;
+        state.deletedProxyKeys.clear();
         setStatus('基础配置已读取', 'ready');
         setFormEnabled(true);
+        renderConfigList();
         clearMessage($('formMessage'));
       } catch (error) {
         state.configLoaded = false;
+        state.configLoadFailed = true;
         setStatus('基础配置读取失败', 'error');
+        renderConfigList();
         showMessage($('formMessage'), 'error', '无法读取当前配置，请确认 /api/config 可访问后刷新页面。');
       }
     }
@@ -713,6 +830,91 @@
 
     function setFormEnabled(enabled) {
       $('generateButton').disabled = !enabled;
+    }
+
+    function getProxyKey(proxy, index) {
+      return [
+        index,
+        String(proxy.name || ''),
+        String(proxy.domain || ''),
+        String(proxy.target || '')
+      ].join('|');
+    }
+
+    function escapeHtml(value) {
+      const div = document.createElement('div');
+      div.textContent = String(value ?? '');
+      return div.innerHTML;
+    }
+
+    function renderConfigList() {
+      const container = $('configList');
+      const undoButton = $('undoDeletesButton');
+
+      if (!state.configLoaded || !state.baseConfig) {
+        container.innerHTML = state.configLoadFailed
+          ? '<div class="config-empty">当前配置读取失败，请刷新页面重试。</div>'
+          : '<div class="config-empty">正在读取当前配置...</div>';
+        undoButton.disabled = true;
+        return;
+      }
+
+      const proxies = state.baseConfig.proxies;
+      undoButton.disabled = state.deletedProxyKeys.size === 0;
+
+      if (proxies.length === 0) {
+        container.innerHTML = '<div class="config-empty">当前没有已有代理配置，可直接新增后生成完整文件。</div>';
+        return;
+      }
+
+      container.innerHTML = proxies.map((proxy, index) => {
+        const key = getProxyKey(proxy, index);
+        const deleted = state.deletedProxyKeys.has(key);
+        const mode = proxy.mode || 'unknown';
+        const name = proxy.name || `未命名配置 ${index + 1}`;
+        const domain = proxy.domain || '未设置匹配域名';
+        const target = proxy.target || '未设置上游目标';
+        const buttonText = deleted ? '撤销' : '删除';
+        const buttonClass = deleted ? 'btn-secondary' : 'btn-danger';
+
+        return `
+          <div class="config-row ${deleted ? 'is-deleted' : ''}">
+            <div class="config-info">
+              <div class="config-title-line">
+                <span class="config-title">${escapeHtml(name)}</span>
+                <span class="config-badge">${escapeHtml(mode)}</span>
+              </div>
+              <div class="config-meta">${escapeHtml(domain)} -> ${escapeHtml(target)}</div>
+            </div>
+            <button type="button" class="btn ${buttonClass} btn-small" data-proxy-index="${index}">${buttonText}</button>
+          </div>
+        `;
+      }).join('');
+
+      container.querySelectorAll('[data-proxy-index]').forEach((button) => {
+        button.addEventListener('click', () => toggleDeleteProxy(Number(button.dataset.proxyIndex)));
+      });
+    }
+
+    function toggleDeleteProxy(index) {
+      const proxy = state.baseConfig.proxies[index];
+      if (!proxy) return;
+
+      const key = getProxyKey(proxy, index);
+      if (state.deletedProxyKeys.has(key)) {
+        state.deletedProxyKeys.delete(key);
+      } else {
+        state.deletedProxyKeys.add(key);
+      }
+
+      clearGeneratedConfig();
+      renderConfigList();
+    }
+
+    function undoDeletes() {
+      state.deletedProxyKeys.clear();
+      clearGeneratedConfig();
+      renderConfigList();
     }
 
     function getMode() {
@@ -777,7 +979,13 @@
     function validateProxyInput() {
       const name = $('proxyName').value.trim();
       const domain = normalizeDomain($('proxyDomain').value);
+      const rawDomain = $('proxyDomain').value.trim();
+      const rawTarget = $('proxyTarget').value.trim();
       let target = '';
+
+      if (!name && !rawDomain && !rawTarget) {
+        return null;
+      }
 
       if (!name) {
         throw new Error('请填写配置名称。');
@@ -792,7 +1000,7 @@
       }
 
       try {
-        target = normalizeTarget($('proxyTarget').value);
+        target = normalizeTarget(rawTarget);
       } catch (error) {
         throw new Error(error.message || '请填写有效的上游目标地址。');
       }
@@ -801,14 +1009,18 @@
         throw new Error('请填写上游目标地址。');
       }
 
-      const duplicate = state.baseConfig.proxies.find((proxy) => {
+      const duplicate = state.baseConfig.proxies.find((proxy, index) => {
+        if (state.deletedProxyKeys.has(getProxyKey(proxy, index))) {
+          return false;
+        }
+
         const proxyName = String(proxy.name || '').trim().toLowerCase();
         const proxyDomain = String(proxy.domain || '').trim().toLowerCase();
         return proxyName === name.toLowerCase() || proxyDomain === domain;
       });
 
       if (duplicate) {
-        throw new Error('配置名称或匹配域名已存在。已有条目不会在页面展示，请换一个名称或域名。');
+        throw new Error('配置名称或匹配域名已存在。请先删除对应配置，或换一个名称和域名。');
       }
 
       return { name, domain, target };
@@ -816,6 +1028,10 @@
 
     function buildProxy() {
       const base = validateProxyInput();
+      if (!base) {
+        return null;
+      }
+
       const mode = getMode();
       const proxy = {
         name: base.name,
@@ -855,7 +1071,14 @@
 
     function createMergedConfig(proxy) {
       const nextConfig = normalizeConfig(state.baseConfig);
-      nextConfig.proxies.push(proxy);
+      nextConfig.proxies = nextConfig.proxies.filter((item, index) => {
+        return !state.deletedProxyKeys.has(getProxyKey(item, index));
+      });
+
+      if (proxy) {
+        nextConfig.proxies.push(proxy);
+      }
+
       return nextConfig;
     }
 
@@ -871,16 +1094,27 @@
       try {
         const proxy = buildProxy();
         const nextConfig = createMergedConfig(proxy);
+        const removedCount = state.deletedProxyKeys.size;
         state.lastConfigText = JSON.stringify(nextConfig, null, 2);
 
-        $('resultSummaryTitle').textContent = `已添加 ${proxy.name}`;
-        $('resultSummaryText').textContent = '完整配置已在浏览器内生成，可直接复制或下载。';
+        const addedText = proxy ? `新增 1 条` : '未新增';
+        const removedText = removedCount > 0 ? `删除 ${removedCount} 条` : '未删除';
+        $('resultSummaryTitle').textContent = '完整配置已准备好';
+        $('resultSummaryText').textContent = `${addedText}，${removedText}；可直接复制或下载。`;
         $('resultEmpty').style.display = 'none';
         $('resultReady').style.display = 'block';
-        showMessage($('formMessage'), 'success', '已把新代理规则合并到完整配置中。');
+        showMessage($('formMessage'), 'success', '已根据当前管理操作生成完整配置。');
       } catch (error) {
         showMessage($('formMessage'), 'error', error.message || '生成失败，请检查填写内容。');
       }
+    }
+
+    function clearGeneratedConfig() {
+      state.lastConfigText = '';
+      $('resultEmpty').style.display = 'grid';
+      $('resultReady').style.display = 'none';
+      $('resultSummaryTitle').textContent = '完整配置已准备好';
+      $('resultSummaryText').textContent = '完整配置已生成，配置内容不会在页面中展示。';
     }
 
     async function copyConfig() {
@@ -920,14 +1154,10 @@
 
     function resetForm() {
       form.reset();
-      state.lastConfigText = '';
       state.lastAppliedMode = 'filtered';
       syncModeUI(true);
       clearMessage($('formMessage'));
-      $('resultEmpty').style.display = 'grid';
-      $('resultReady').style.display = 'none';
-      $('resultSummaryTitle').textContent = '完整配置已准备好';
-      $('resultSummaryText').textContent = '新代理规则已追加，已有配置内容不会在页面中展示。';
+      clearGeneratedConfig();
     }
 
     function showMessage(element, type, text) {
@@ -954,6 +1184,7 @@
 
     form.addEventListener('submit', handleGenerate);
     $('resetButton').addEventListener('click', resetForm);
+    $('undoDeletesButton').addEventListener('click', undoDeletes);
     $('copyButton').addEventListener('click', copyConfig);
     $('downloadButton').addEventListener('click', downloadConfig);
 
