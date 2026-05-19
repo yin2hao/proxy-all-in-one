@@ -22,21 +22,75 @@ function loadConfig() {
   }
 }
 
+function normalizeHost(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (!raw) return '';
+
+  try {
+    const url = new URL(raw.includes('://') ? raw : `http://${raw}`);
+    return url.hostname.toLowerCase();
+  } catch {
+    return raw
+      .replace(/^https?:\/\//i, '')
+      .replace(/\/.*$/, '')
+      .replace(/:\d+$/, '')
+      .toLowerCase();
+  }
+}
+
 // 根据域名查找代理配置
 function findProxyByDomain(config, domain) {
-  return config.proxies.find(p => p.domain === domain || domain.endsWith(`.${p.domain}`));
+  const host = normalizeHost(domain);
+  return config.proxies.find(p => {
+    const proxyDomain = normalizeHost(p.domain);
+    return proxyDomain && (host === proxyDomain || host.endsWith(`.${proxyDomain}`));
+  });
 }
 
 // 解析 URL，提取目标域名和剩余路径
 function parseProxyUrl(url) {
+  const rawUrl = String(url || '').trim();
+  const withoutPrefix = rawUrl.startsWith('/') ? rawUrl.slice(1) : rawUrl;
+  const absoluteCandidates = [withoutPrefix];
+
+  try {
+    absoluteCandidates.push(decodeURIComponent(withoutPrefix));
+  } catch {
+    // Keep the raw candidate when the path is not URI-encoded.
+  }
+
+  for (const candidate of absoluteCandidates) {
+    if (!/^https?:\/\//i.test(candidate)) continue;
+
+    try {
+      const targetUrl = new URL(candidate);
+      return {
+        domain: targetUrl.hostname.toLowerCase(),
+        path: `${targetUrl.pathname || '/'}${targetUrl.search || ''}`
+      };
+    } catch {
+      // Fall through to the legacy domain/path format.
+    }
+  }
+
   // 格式: /domain.com/path/to/resource
-  const match = url.match(/^\/([^\/]+)(\/.*)?$/);
+  const match = rawUrl.match(/^\/([^\/?#]+)([\/?#].*)?$/);
   if (!match) return null;
-  
+
+  const suffix = match[2] || '/';
   return {
-    domain: match[1],
-    path: match[2] || '/'
+    domain: normalizeHost(match[1]),
+    path: suffix
   };
+}
+
+function buildTargetUrl(target, path) {
+  const normalizedTarget = String(target || '').replace(/\/+$/, '');
+  if (!path) return normalizedTarget;
+  if (path.startsWith('?') || path.startsWith('#')) {
+    return `${normalizedTarget}${path}`;
+  }
+  return `${normalizedTarget}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
 // 替换模板变量
@@ -104,7 +158,7 @@ app.all('*', async (req, res) => {
   }
   
   // 构建目标 URL
-  const targetUrl = `${proxyConfig.target}${path}`;
+  const targetUrl = buildTargetUrl(proxyConfig.target, path);
   
   console.log(`[proxy] ${req.method} ${req.url} -> ${targetUrl} (${proxyConfig.mode} mode)`);
   

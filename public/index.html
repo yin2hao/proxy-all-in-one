@@ -197,6 +197,29 @@
       font-size: 12px;
     }
 
+    .usage-note {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 16px;
+      padding: 12px;
+      border: 1px solid #b7d7ff;
+      border-radius: 8px;
+      background: #f4f9ff;
+      color: #344054;
+      font-size: 13px;
+    }
+
+    .usage-note strong {
+      color: #1849a9;
+      font-size: 14px;
+    }
+
+    .usage-note code {
+      color: #175cd3;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      word-break: break-all;
+    }
+
     .section-heading {
       display: flex;
       justify-content: space-between;
@@ -692,6 +715,11 @@
 
           <div class="section">
             <div class="section-title">2. 新增代理规则</div>
+            <div class="usage-note">
+              <strong>代理使用方式</strong>
+              <span>配置完成后，可将完整原网址接在代理域名后：<code>https://你的代理域名/https://原网站/路径</code>。</span>
+              <span>配置文件里仍只保存域名，用来稳定匹配这类完整原网址。</span>
+            </div>
             <div class="field-grid">
               <div class="field">
                 <label for="proxyName">配置名称</label>
@@ -700,14 +728,14 @@
               </div>
               <div class="field">
                 <label for="proxyDomain">匹配域名</label>
-                <input type="text" id="proxyDomain" autocomplete="off" placeholder="generativelanguage.googleapis.com">
-                <div class="hint">只填写域名，不包含 http:// 或路径。</div>
+                <input type="text" id="proxyDomain" autocomplete="off" placeholder="https://generativelanguage.googleapis.com/v1beta/models">
+                <div class="hint">可粘贴完整原网址，会自动提取域名保存。</div>
               </div>
             </div>
             <div class="field">
               <label for="proxyTarget">上游目标地址</label>
               <input type="url" id="proxyTarget" autocomplete="off" placeholder="https://generativelanguage.googleapis.com">
-              <div class="hint">填写协议和域名，可包含端口；末尾斜杠会自动整理。</div>
+              <div class="hint">填写原服务的协议和域名；如果上方粘贴了完整 https 原网址，此处可留空自动推导。</div>
             </div>
           </div>
 
@@ -1017,12 +1045,19 @@
     }
 
     function normalizeDomain(value) {
-      return value
-        .trim()
-        .replace(/^https?:\/\//i, '')
-        .replace(/\/.*$/, '')
-        .replace(/:\d+$/, '')
-        .toLowerCase();
+      const raw = value.trim();
+      if (!raw) return '';
+
+      try {
+        const url = new URL(raw.includes('://') ? raw : `http://${raw}`);
+        return url.hostname.toLowerCase();
+      } catch (error) {
+        return raw
+          .replace(/^https?:\/\//i, '')
+          .replace(/\/.*$/, '')
+          .replace(/:\d+$/, '')
+          .toLowerCase();
+      }
     }
 
     function normalizeTarget(value) {
@@ -1038,11 +1073,25 @@
       return normalized.endsWith('/') ? normalized.slice(0, -1) : normalized;
     }
 
+    function inferTargetFromDomain(value) {
+      const raw = value.trim();
+      if (!/^https?:\/\//i.test(raw)) {
+        return '';
+      }
+
+      try {
+        const url = new URL(raw);
+        return url.origin;
+      } catch (error) {
+        return '';
+      }
+    }
+
     function validateProxyInput() {
       const name = $('proxyName').value.trim();
       const domain = normalizeDomain($('proxyDomain').value);
       const rawDomain = $('proxyDomain').value.trim();
-      const rawTarget = $('proxyTarget').value.trim();
+      const rawTarget = $('proxyTarget').value.trim() || inferTargetFromDomain(rawDomain);
       let target = '';
 
       if (!name && !rawDomain && !rawTarget) {
@@ -1055,10 +1104,6 @@
 
       if (!domain) {
         throw new Error('请填写匹配域名。');
-      }
-
-      if (domain.includes('/') || domain.includes('://')) {
-        throw new Error('匹配域名只需要域名本身，不要包含协议或路径。');
       }
 
       try {
