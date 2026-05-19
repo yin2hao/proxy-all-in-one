@@ -446,7 +446,7 @@
     }
 
     .result-empty {
-      display: grid;
+      display: none;
       min-height: 420px;
       place-items: center;
       padding: 28px;
@@ -465,7 +465,7 @@
     }
 
     .result-ready {
-      display: none;
+      display: block;
     }
 
     .result-summary {
@@ -493,8 +493,8 @@
       overflow: auto;
       border: 1px solid #cfd8e3;
       border-radius: 8px;
-      background: #101828;
-      color: #e4e7ec;
+      background: #fff;
+      color: #344054;
       font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
       font-size: 13px;
       line-height: 1.45;
@@ -505,6 +505,7 @@
       grid-template-columns: 38px minmax(0, 1fr);
       min-height: 22px;
       padding-right: 12px;
+      border-bottom: 1px solid #eef2f6;
       white-space: pre-wrap;
       word-break: break-word;
     }
@@ -521,25 +522,25 @@
     }
 
     .diff-line.added {
-      background: #073b2a;
-      color: #d1fadf;
+      background: #ecfdf3;
+      color: #067647;
     }
 
     .diff-line.added .diff-prefix {
-      color: #75e0a7;
+      color: #079455;
     }
 
     .diff-line.removed {
-      background: #4e1d1b;
-      color: #ffd6d1;
+      background: #fff1f0;
+      color: #b42318;
     }
 
     .diff-line.removed .diff-prefix {
-      color: #f97066;
+      color: #d92d20;
     }
 
     .diff-line.unchanged {
-      color: #d0d5dd;
+      color: #344054;
     }
 
     .result-toolbar {
@@ -686,7 +687,7 @@
             <div id="configList" class="config-list">
               <div class="config-empty">正在读取当前配置...</div>
             </div>
-            <div class="hint">列表只显示识别信息，删除后请点击“生成完整配置”拿到新的 config.json。</div>
+            <div class="hint">列表只显示识别信息，删除或撤销后会实时更新右侧差异预览。</div>
           </div>
 
           <div class="section">
@@ -763,7 +764,6 @@
           </div>
 
           <div class="actions">
-            <button id="generateButton" type="submit" class="btn btn-primary" disabled>生成完整配置</button>
             <button type="button" class="btn btn-secondary" id="resetButton">清空表单</button>
           </div>
           <div id="formMessage" class="message" role="alert"></div>
@@ -773,31 +773,31 @@
       <section class="panel" aria-labelledby="resultTitle">
         <div class="panel-header">
           <h2 id="resultTitle">完整 config.json</h2>
-          <p>生成后会输出包含新增和删除结果的完整配置文件。</p>
+          <p>左侧调整后会实时输出包含新增和删除结果的完整配置文件。</p>
         </div>
 
         <div class="result">
           <div id="resultEmpty" class="result-empty">
             <div>
-              <strong>等待生成</strong>
-              <span>调整左侧配置后，点击生成即可复制或下载完整文件。</span>
+              <strong>正在读取配置</strong>
+              <span>基础配置读取完成后会自动生成预览。</span>
             </div>
           </div>
 
           <div id="resultReady" class="result-ready">
             <div class="result-toolbar">
-              <h3>配置文件已准备好</h3>
+              <h3>实时配置差异</h3>
               <div class="result-buttons">
-                <button type="button" class="btn btn-success" id="copyButton">复制完整配置</button>
-                <button type="button" class="btn btn-secondary" id="downloadButton">下载 config.json</button>
+                <button type="button" class="btn btn-success" id="copyButton" disabled>复制完整配置</button>
+                <button type="button" class="btn btn-secondary" id="downloadButton" disabled>下载 config.json</button>
               </div>
             </div>
             <div class="result-summary">
-              <strong id="resultSummaryTitle">完整配置已准备好</strong>
-              <span id="resultSummaryText">完整配置已生成，可在下方查看差异。</span>
+              <strong id="resultSummaryTitle">正在读取配置</strong>
+              <span id="resultSummaryText">基础配置读取完成后会自动生成差异预览。</span>
             </div>
             <pre id="configDiffPreview" class="diff-preview" aria-label="配置差异预览"></pre>
-            <div id="resultMessage" class="message success">已生成完整配置文件，可复制或下载后替换仓库根目录的 config.json。</div>
+            <div id="resultMessage" class="message success">当前完整配置文件可复制或下载后替换仓库根目录的 config.json。</div>
           </div>
         </div>
       </section>
@@ -850,12 +850,14 @@
         setStatus('基础配置已读取', 'ready');
         setFormEnabled(true);
         renderConfigList();
+        refreshGeneratedConfig();
         clearMessage($('formMessage'));
       } catch (error) {
         state.configLoaded = false;
         state.configLoadFailed = true;
         setStatus('基础配置读取失败', 'error');
         renderConfigList();
+        clearGeneratedConfig('配置读取失败', '无法生成预览，请确认 /api/config 可访问后刷新页面。');
         showMessage($('formMessage'), 'error', '无法读取当前配置，请确认 /api/config 可访问后刷新页面。');
       }
     }
@@ -882,7 +884,11 @@
     }
 
     function setFormEnabled(enabled) {
-      $('generateButton').disabled = !enabled;
+      form.querySelectorAll('input, button, summary').forEach((element) => {
+        if (element.id !== 'copyButton' && element.id !== 'downloadButton') {
+          element.disabled = !enabled;
+        }
+      });
     }
 
     function getProxyKey(proxy, index) {
@@ -962,12 +968,14 @@
 
       clearGeneratedConfig();
       renderConfigList();
+      refreshGeneratedConfig();
     }
 
     function undoDeletes() {
       state.deletedProxyKeys.clear();
       clearGeneratedConfig();
       renderConfigList();
+      refreshGeneratedConfig();
     }
 
     function getMode() {
@@ -998,6 +1006,7 @@
       }
 
       state.lastAppliedMode = mode;
+      refreshGeneratedConfig();
     }
 
     function parseCSV(value) {
@@ -1231,12 +1240,22 @@
       container.appendChild(fragment);
     }
 
-    function handleGenerate(event) {
-      event.preventDefault();
+    function setResultActionsEnabled(enabled) {
+      $('copyButton').disabled = !enabled;
+      $('downloadButton').disabled = !enabled;
+    }
+
+    function refreshGeneratedConfig() {
       clearMessage($('formMessage'));
 
       if (!state.configLoaded) {
-        showMessage($('formMessage'), 'error', '基础配置尚未读取完成，请稍后再试。');
+        state.lastConfigText = '';
+        setResultActionsEnabled(false);
+        $('resultSummaryTitle').textContent = state.configLoadFailed ? '配置读取失败' : '正在读取配置';
+        $('resultSummaryText').textContent = state.configLoadFailed
+          ? '无法生成预览，请确认 /api/config 可访问后刷新页面。'
+          : '基础配置读取完成后会自动生成差异预览。';
+        $('configDiffPreview').innerHTML = '';
         return;
       }
 
@@ -1253,18 +1272,23 @@
         renderDiffPreview(state.baseConfig, nextConfig);
         $('resultEmpty').style.display = 'none';
         $('resultReady').style.display = 'block';
-        showMessage($('formMessage'), 'success', '已根据当前管理操作生成完整配置。');
+        setResultActionsEnabled(true);
       } catch (error) {
-        showMessage($('formMessage'), 'error', error.message || '生成失败，请检查填写内容。');
+        state.lastConfigText = '';
+        setResultActionsEnabled(false);
+        $('resultSummaryTitle').textContent = '等待完整信息';
+        $('resultSummaryText').textContent = error.message || '请补全新增代理信息，或清空新增表单仅处理删除。';
+        $('configDiffPreview').innerHTML = '';
       }
     }
 
-    function clearGeneratedConfig() {
+    function clearGeneratedConfig(title = '正在读取配置', text = '基础配置读取完成后会自动生成差异预览。') {
       state.lastConfigText = '';
-      $('resultEmpty').style.display = 'grid';
-      $('resultReady').style.display = 'none';
-      $('resultSummaryTitle').textContent = '完整配置已准备好';
-      $('resultSummaryText').textContent = '完整配置已生成，可在下方查看差异。';
+      setResultActionsEnabled(false);
+      $('resultEmpty').style.display = 'none';
+      $('resultReady').style.display = 'block';
+      $('resultSummaryTitle').textContent = title;
+      $('resultSummaryText').textContent = text;
       $('configDiffPreview').innerHTML = '';
     }
 
@@ -1308,7 +1332,7 @@
       state.lastAppliedMode = 'filtered';
       syncModeUI(true);
       clearMessage($('formMessage'));
-      clearGeneratedConfig();
+      refreshGeneratedConfig();
     }
 
     function showMessage(element, type, text) {
@@ -1333,7 +1357,9 @@
       input.addEventListener('change', () => syncModeUI());
     });
 
-    form.addEventListener('submit', handleGenerate);
+    form.addEventListener('submit', (event) => event.preventDefault());
+    form.addEventListener('input', refreshGeneratedConfig);
+    form.addEventListener('change', refreshGeneratedConfig);
     $('resetButton').addEventListener('click', resetForm);
     $('undoDeletesButton').addEventListener('click', undoDeletes);
     $('copyButton').addEventListener('click', copyConfig);
