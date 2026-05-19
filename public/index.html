@@ -509,6 +509,45 @@
       font-size: 17px;
     }
 
+    .diff-stats {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 2px;
+    }
+
+    .diff-stat {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 2px 8px;
+      border: 1px solid #d9e0e7;
+      border-radius: 999px;
+      background: #fff;
+      color: #475467;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .diff-stat.added {
+      border-color: #abefc6;
+      background: #ecfdf3;
+      color: #067647;
+    }
+
+    .diff-stat.modified {
+      border-color: #b7d7ff;
+      background: #eff8ff;
+      color: #175cd3;
+    }
+
+    .diff-stat.removed {
+      border-color: #ffd0cc;
+      background: #fff1f0;
+      color: #b42318;
+    }
+
     .diff-preview {
       margin-top: 12px;
       min-height: 420px;
@@ -823,6 +862,11 @@
             <div class="result-summary">
               <strong id="resultSummaryTitle">正在读取配置</strong>
               <span id="resultSummaryText">基础配置读取完成后会自动生成差异预览。</span>
+              <div id="diffStats" class="diff-stats" aria-label="差异统计">
+                <span class="diff-stat added">增加 0 行</span>
+                <span class="diff-stat modified">修改 0 行</span>
+                <span class="diff-stat removed">删除 0 行</span>
+              </div>
             </div>
             <pre id="configDiffPreview" class="diff-preview" aria-label="配置差异预览"></pre>
             <div id="resultMessage" class="message success">当前完整配置文件可复制或下载后替换仓库根目录的 config.json。</div>
@@ -1239,6 +1283,51 @@
       return diff;
     }
 
+    function getDiffStats(diff) {
+      const stats = {
+        added: 0,
+        modified: 0,
+        removed: 0
+      };
+
+      let pendingAdded = 0;
+      let pendingRemoved = 0;
+
+      function flushPending() {
+        const modified = Math.min(pendingAdded, pendingRemoved);
+        stats.modified += modified;
+        stats.added += pendingAdded - modified;
+        stats.removed += pendingRemoved - modified;
+        pendingAdded = 0;
+        pendingRemoved = 0;
+      }
+
+      diff.forEach((item) => {
+        if (item.type === 'added') {
+          pendingAdded++;
+          return;
+        }
+
+        if (item.type === 'removed') {
+          pendingRemoved++;
+          return;
+        }
+
+        flushPending();
+      });
+
+      flushPending();
+      return stats;
+    }
+
+    function updateDiffStats(stats = { added: 0, modified: 0, removed: 0 }) {
+      $('diffStats').innerHTML = `
+        <span class="diff-stat added">增加 ${stats.added} 行</span>
+        <span class="diff-stat modified">修改 ${stats.modified} 行</span>
+        <span class="diff-stat removed">删除 ${stats.removed} 行</span>
+      `;
+    }
+
     function renderDiffPreview(oldConfig, newConfig) {
       const oldText = JSON.stringify(oldConfig, null, 2);
       const newText = JSON.stringify(newConfig, null, 2);
@@ -1248,6 +1337,8 @@
       container.innerHTML = '';
 
       if (oldText === newText) {
+        updateDiffStats();
+
         const line = document.createElement('div');
         line.className = 'diff-line unchanged';
 
@@ -1263,6 +1354,8 @@
         container.appendChild(line);
         return;
       }
+
+      updateDiffStats(getDiffStats(diff));
 
       const fragment = document.createDocumentFragment();
       diff.forEach((item) => {
@@ -1301,6 +1394,7 @@
           ? '无法生成预览，请确认 /api/config 可访问后刷新页面。'
           : '基础配置读取完成后会自动生成差异预览。';
         $('configDiffPreview').innerHTML = '';
+        updateDiffStats();
         return;
       }
 
@@ -1324,6 +1418,7 @@
         $('resultSummaryTitle').textContent = '等待完整信息';
         $('resultSummaryText').textContent = error.message || '请补全新增代理信息，或清空新增表单仅处理删除。';
         $('configDiffPreview').innerHTML = '';
+        updateDiffStats();
       }
     }
 
@@ -1335,6 +1430,7 @@
       $('resultSummaryTitle').textContent = title;
       $('resultSummaryText').textContent = text;
       $('configDiffPreview').innerHTML = '';
+      updateDiffStats();
     }
 
     async function copyConfig() {
