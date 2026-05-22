@@ -34,6 +34,10 @@ function normalizeHost(value) {
   }
 }
 
+function normalizeAbsoluteUrlCandidate(value) {
+  return String(value || '').replace(/^(https?):\/(?!\/)/i, '$1://');
+}
+
 // 根据域名查找代理配置
 function findProxyByDomain(config, domain) {
   const host = normalizeHost(domain);
@@ -47,10 +51,10 @@ function findProxyByDomain(config, domain) {
 function parseProxyUrl(url) {
   const rawUrl = String(url || '').trim();
   const withoutPrefix = rawUrl.startsWith('/') ? rawUrl.slice(1) : rawUrl;
-  const absoluteCandidates = [withoutPrefix];
+  const absoluteCandidates = [normalizeAbsoluteUrlCandidate(withoutPrefix)];
 
   try {
-    absoluteCandidates.push(decodeURIComponent(withoutPrefix));
+    absoluteCandidates.push(normalizeAbsoluteUrlCandidate(decodeURIComponent(withoutPrefix)));
   } catch {
     // Keep the raw candidate when the path is not URI-encoded.
   }
