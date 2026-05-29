@@ -73,6 +73,55 @@ function saveConfig(config) {
   writeFileSync(CONFIG_PATH, JSON.stringify(normalizeConfig(config), null, 2), 'utf-8');
 }
 
+function parseRegexLiteral(value) {
+  const raw = String(value || '').trim();
+  if (!raw.startsWith('/')) return null;
+
+  let end = -1;
+  for (let i = raw.length - 1; i > 0; i--) {
+    if (raw[i] === '/' && raw[i - 1] !== '\\') {
+      end = i;
+      break;
+    }
+  }
+
+  if (end <= 0) return null;
+
+  const pattern = raw.slice(1, end);
+  const flags = raw.slice(end + 1);
+  try {
+    return new RegExp(pattern, flags);
+  } catch {
+    return null;
+  }
+}
+
+function isValidHttpUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function isValidTargetRule(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return false;
+
+  if (/^regex:/i.test(raw)) {
+    const body = raw.slice(6).trim();
+    const separatorIndex = body.indexOf('=>');
+    if (separatorIndex < 0) return false;
+
+    const regexPart = body.slice(0, separatorIndex).trim();
+    const replacement = body.slice(separatorIndex + 2).trim();
+    return Boolean(parseRegexLiteral(regexPart)) && Boolean(replacement);
+  }
+
+  return isValidHttpUrl(raw);
+}
+
 // 验证代理配置
 function validateProxy(proxy) {
   const errors = [];
@@ -82,9 +131,13 @@ function validateProxy(proxy) {
   }
   if (!proxy.domain || typeof proxy.domain !== 'string') {
     errors.push('domain is required and must be a string');
+  } else if (proxy.domain.trim().startsWith('/') && !parseRegexLiteral(proxy.domain)) {
+    errors.push('domain regex is invalid, expected /pattern/flags');
   }
   if (!proxy.target || typeof proxy.target !== 'string') {
     errors.push('target is required and must be a string');
+  } else if (!isValidTargetRule(proxy.target)) {
+    errors.push('target must be a URL or regex rule: regex:/pattern/flags => replacement');
   }
   if (!['simple', 'filtered'].includes(proxy.mode)) {
     errors.push('mode must be "simple" or "filtered"');

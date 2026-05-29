@@ -778,14 +778,14 @@
               </div>
               <div class="field">
                 <label for="proxyDomain">匹配域名</label>
-                <input type="text" id="proxyDomain" autocomplete="off" placeholder="https://generativelanguage.googleapis.com/v1beta/models">
-                <div class="hint">可粘贴完整原网址，会自动提取域名保存。</div>
+                <input type="text" id="proxyDomain" autocomplete="off" placeholder="generativelanguage.googleapis.com 或 /^api\\d+\\.example\\.com$/">
+                <div class="hint">支持普通域名，也支持 /正则/flags 写法；粘贴完整原网址会自动提取域名。</div>
               </div>
             </div>
             <div class="field">
               <label for="proxyTarget">上游目标地址</label>
-              <input type="url" id="proxyTarget" autocomplete="off" placeholder="https://generativelanguage.googleapis.com">
-              <div class="hint">填写原服务的协议和域名；如果上方粘贴了完整 https 原网址，此处可留空自动推导。</div>
+              <input type="text" id="proxyTarget" autocomplete="off" placeholder="https://generativelanguage.googleapis.com 或 regex:/^https:\\/\\/api\\.(.+)$/ => https://$1.internal">
+              <div class="hint">支持 URL，或 regex 重写规则：<code>regex:/正则/flags => 替换串</code>（替换串可用 $1、$2）。</div>
             </div>
           </div>
 
@@ -1102,9 +1102,40 @@
         .filter(Boolean);
     }
 
+    function parseRegexLiteral(value) {
+      const raw = String(value || '').trim();
+      if (!raw.startsWith('/')) return null;
+
+      let end = -1;
+      for (let i = raw.length - 1; i > 0; i--) {
+        if (raw[i] === '/' && raw[i - 1] !== '\\') {
+          end = i;
+          break;
+        }
+      }
+
+      if (end <= 0) return null;
+
+      const pattern = raw.slice(1, end);
+      const flags = raw.slice(end + 1);
+      try {
+        return new RegExp(pattern, flags);
+      } catch {
+        return null;
+      }
+    }
+
     function normalizeDomain(value) {
       const raw = value.trim();
       if (!raw) return '';
+
+      const regex = parseRegexLiteral(raw);
+      if (regex) {
+        return raw;
+      }
+      if (raw.startsWith('/')) {
+        throw new Error('匹配域名正则格式错误，应为 /正则/flags。');
+      }
 
       try {
         const url = new URL(raw.includes('://') ? raw : `http://${raw}`);
@@ -1121,6 +1152,25 @@
     function normalizeTarget(value) {
       const trimmed = value.trim();
       if (!trimmed) return '';
+
+      if (/^regex:/i.test(trimmed)) {
+        const body = trimmed.slice(6).trim();
+        const separatorIndex = body.indexOf('=>');
+        if (separatorIndex < 0) {
+          throw new Error('正则上游写法应为：regex:/正则/flags => 替换串');
+        }
+
+        const regexPart = body.slice(0, separatorIndex).trim();
+        const replacement = body.slice(separatorIndex + 2).trim();
+        if (!parseRegexLiteral(regexPart)) {
+          throw new Error('上游目标地址正则格式错误，应为 /正则/flags。');
+        }
+        if (!replacement) {
+          throw new Error('正则上游替换串不能为空。');
+        }
+
+        return `regex:${regexPart} => ${replacement}`;
+      }
 
       const url = new URL(trimmed);
       if (!['http:', 'https:'].includes(url.protocol)) {
@@ -1142,6 +1192,23 @@
         return url.origin;
       } catch (error) {
         return '';
+      }
+    }
+
+    function getDomainCompareKey(value) {
+      const raw = String(value || '').trim();
+      const regex = parseRegexLiteral(raw);
+      if (regex) {
+        return `regex:${raw}`;
+      }
+      return `host:${normalizeDomain(raw)}`;
+    }
+
+    function getSafeDomainCompareKey(value) {
+      try {
+        return getDomainCompareKey(value);
+      } catch {
+        return `raw:${String(value || '').trim().toLowerCase()}`;
       }
     }
 
@@ -1180,8 +1247,8 @@
         }
 
         const proxyName = String(proxy.name || '').trim().toLowerCase();
-        const proxyDomain = String(proxy.domain || '').trim().toLowerCase();
-        return proxyName === name.toLowerCase() || proxyDomain === domain;
+        const proxyDomainKey = getSafeDomainCompareKey(proxy.domain);
+        return proxyName === name.toLowerCase() || proxyDomainKey === getDomainCompareKey(domain);
       });
 
       if (duplicate) {

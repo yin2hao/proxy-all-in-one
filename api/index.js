@@ -47,12 +47,112 @@ function normalizeAbsoluteUrlCandidate(value) {
   return String(value || '').replace(/^(https?):\/(?!\/)/i, '$1://');
 }
 
+function parseRegexLiteral(value) {
+  const raw = String(value || '').trim();
+  if (!raw.startsWith('/')) return null;
+
+  let end = -1;
+  for (let i = raw.length - 1; i > 0; i--) {
+    if (raw[i] === '/' && raw[i - 1] !== '\\') {
+      end = i;
+      break;
+    }
+  }
+
+  if (end <= 0) return null;
+
+  const pattern = raw.slice(1, end);
+  const flags = raw.slice(end + 1);
+  try {
+    return new RegExp(pattern, flags);
+  } catch {
+    return null;
+  }
+}
+
+function isValidHttpUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function parseTargetRule(target) {
+  const raw = String(target || '').trim();
+
+  if (/^regex:/i.test(raw)) {
+    const body = raw.slice(6).trim();
+    const separatorIndex = body.indexOf('=>');
+    if (separatorIndex < 0) {
+      throw new Error('Regex target must use: regex:/pattern/flags => replacement');
+    }
+
+    const regexPart = body.slice(0, separatorIndex).trim();
+    const replacement = body.slice(separatorIndex + 2).trim();
+    const regex = parseRegexLiteral(regexPart);
+
+    if (!regex) {
+      throw new Error(`Invalid target regex: ${regexPart}`);
+    }
+    if (!replacement) {
+      throw new Error('Regex target replacement cannot be empty');
+    }
+
+    return { type: 'regex-rewrite', regex, replacement };
+  }
+
+  if (!isValidHttpUrl(raw)) {
+    throw new Error(`Invalid target URL: ${raw}`);
+  }
+
+  return { type: 'url', value: raw };
+}
+
+function getOriginalRequestAbsoluteUrl(parsed) {
+  if (parsed.absoluteTargetUrl) {
+    return parsed.absoluteTargetUrl;
+  }
+  return `https://${parsed.domain}${parsed.path.startsWith('/') ? parsed.path : `/${parsed.path}`}`;
+}
+
+function resolveTargetUrl(targetRule, parsed) {
+  const parsedRule = parseTargetRule(targetRule);
+
+  if (parsedRule.type === 'url') {
+    return buildTargetUrl(parsedRule.value, parsed.path);
+  }
+
+  const sourceUrl = getOriginalRequestAbsoluteUrl(parsed);
+  const rewritten = normalizeAbsoluteUrlCandidate(sourceUrl.replace(parsedRule.regex, parsedRule.replacement));
+
+  if (rewritten === sourceUrl) {
+    throw new Error(`Target regex did not match source URL: ${sourceUrl}`);
+  }
+
+  if (!isValidHttpUrl(rewritten)) {
+    throw new Error(`Regex target rewrite result must be http/https URL: ${rewritten}`);
+  }
+
+  return new URL(rewritten).toString();
+}
+
+function domainMatches(rule, domain) {
+  const host = normalizeHost(domain);
+  const regex = parseRegexLiteral(rule);
+  if (regex) {
+    return regex.test(host);
+  }
+
+  const proxyDomain = normalizeHost(rule);
+  return proxyDomain && (host === proxyDomain || host.endsWith(`.${proxyDomain}`));
+}
+
 // 根据域名查找代理配置
 function findProxyByDomain(config, domain) {
-  const host = normalizeHost(domain);
   return config.proxies.find(p => {
-    const proxyDomain = normalizeHost(p.domain);
-    return proxyDomain && (host === proxyDomain || host.endsWith(`.${proxyDomain}`));
+    return domainMatches(p.domain, domain);
   });
 }
 
@@ -177,7 +277,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid proxy URL format' });
   }
   
-  const { domain, path } = parsed;
+  const { domain } = parsed;
   const bypassEnabled = config.globalBypassConfig;
   const proxyConfig = bypassEnabled
     ? {
@@ -199,7 +299,16 @@ export default async function handler(req, res) {
   }
 
   // 构建目标 URL
-  const targetUrl = bypassEnabled ? buildBypassTargetUrl(parsed) : buildTargetUrl(proxyConfig.target, path);
+  let targetUrl = '';
+  try {
+    targetUrl = bypassEnabled ? buildBypassTargetUrl(parsed) : resolveTargetUrl(proxyConfig.target, parsed);
+  } catch (err) {
+    return res.status(500).json({
+      error: 'Invalid proxy target rule',
+      proxy: proxyConfig.name || 'unknown',
+      message: err.message
+    });
+  }
 
   if (bypassEnabled) {
     console.log(`[proxy] ${req.method} ${requestUrl} -> ${targetUrl} (global bypass simple mode)`);
@@ -239,10 +348,11 @@ export default async function handler(req, res) {
     }
     
     // 设置模板化的头
+    const resolvedTarget = new URL(targetUrl);
     const vars = {
-      target_hostname: new URL(proxyConfig.target).hostname,
-      target_origin: new URL(proxyConfig.target).origin,
-      target_url: proxyConfig.target
+      target_hostname: resolvedTarget.hostname,
+      target_origin: resolvedTarget.origin,
+      target_url: targetUrl
     };
     
     if (proxyConfig.headers?.set) {
