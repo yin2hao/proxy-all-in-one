@@ -768,7 +768,7 @@
             <div class="usage-note">
               <strong>代理使用方式</strong>
               <span>配置完成后，可将完整原网址接在代理域名后：<code>https://你的代理域名/https://原网站/路径</code>。</span>
-              <span>配置文件里仍只保存域名，用来稳定匹配这类完整原网址。</span>
+              <span>默认会直接转发到匹配到的原始域名；只有启用覆写时才会改写到指定上游。</span>
             </div>
             <div class="field-grid">
               <div class="field">
@@ -782,7 +782,13 @@
                 <div class="hint">支持普通域名，也支持 /正则/flags 写法；粘贴完整原网址会自动提取域名。</div>
               </div>
             </div>
-            <div class="field">
+            <div class="check-list">
+              <label class="check-row">
+                <input type="checkbox" id="overrideTarget">
+                <span>启用上游覆写</span>
+              </label>
+            </div>
+            <div id="overrideTargetFields" class="field hidden">
               <label for="proxyTarget">上游目标地址</label>
               <input type="text" id="proxyTarget" autocomplete="off" placeholder="https://generativelanguage.googleapis.com 或 regex:/^https:\\/\\/api\\.(.+)$/ => https://$1.internal">
               <div class="hint">支持 URL，或 regex 重写规则：<code>regex:/正则/flags => 替换串</code>（替换串可用 $1、$2）。</div>
@@ -915,6 +921,7 @@
     const removeReqHeaders = $('removeReqHeaders');
     const removeResHeaders = $('removeResHeaders');
     const globalBypassConfigInput = $('globalBypassConfig');
+    const overrideTargetInput = $('overrideTarget');
 
     async function loadBaseConfig() {
       setStatus('正在读取基础配置');
@@ -934,6 +941,7 @@
         state.deletedProxyKeys.clear();
         setStatus('基础配置已读取', 'ready');
         setFormEnabled(true);
+        syncOverrideTargetUI();
         renderConfigList();
         refreshGeneratedConfig();
         clearMessage($('formMessage'));
@@ -1018,7 +1026,7 @@
         const mode = proxy.mode || 'unknown';
         const name = proxy.name || `未命名配置 ${index + 1}`;
         const domain = proxy.domain || '未设置匹配域名';
-        const target = proxy.target || '未设置上游目标';
+        const target = proxy.target || '原始域名';
         const buttonText = deleted ? '撤销' : '删除';
         const buttonClass = deleted ? 'btn-secondary' : 'btn-danger';
 
@@ -1092,6 +1100,16 @@
       }
 
       state.lastAppliedMode = mode;
+      refreshGeneratedConfig();
+    }
+
+    function syncOverrideTargetUI() {
+      const enabled = overrideTargetInput.checked;
+      $('overrideTargetFields').classList.toggle('hidden', !enabled);
+      $('proxyTarget').disabled = !enabled;
+      if (!enabled) {
+        $('proxyTarget').value = '';
+      }
       refreshGeneratedConfig();
     }
 
@@ -1181,20 +1199,6 @@
       return normalized.endsWith('/') ? normalized.slice(0, -1) : normalized;
     }
 
-    function inferTargetFromDomain(value) {
-      const raw = value.trim();
-      if (!/^https?:\/\//i.test(raw)) {
-        return '';
-      }
-
-      try {
-        const url = new URL(raw);
-        return url.origin;
-      } catch (error) {
-        return '';
-      }
-    }
-
     function getDomainCompareKey(value) {
       const raw = String(value || '').trim();
       const regex = parseRegexLiteral(raw);
@@ -1216,7 +1220,8 @@
       const name = $('proxyName').value.trim();
       const domain = normalizeDomain($('proxyDomain').value);
       const rawDomain = $('proxyDomain').value.trim();
-      const rawTarget = $('proxyTarget').value.trim() || inferTargetFromDomain(rawDomain);
+      const overrideTarget = overrideTargetInput.checked;
+      const rawTarget = overrideTarget ? $('proxyTarget').value.trim() : '';
       let target = '';
 
       if (!name && !rawDomain && !rawTarget) {
@@ -1231,14 +1236,16 @@
         throw new Error('请填写匹配域名。');
       }
 
-      try {
-        target = normalizeTarget(rawTarget);
-      } catch (error) {
-        throw new Error(error.message || '请填写有效的上游目标地址。');
-      }
+      if (overrideTarget) {
+        try {
+          target = normalizeTarget(rawTarget);
+        } catch (error) {
+          throw new Error(error.message || '请填写有效的上游目标地址。');
+        }
 
-      if (!target) {
-        throw new Error('请填写上游目标地址。');
+        if (!target) {
+          throw new Error('启用上游覆写后，请填写上游目标地址。');
+        }
       }
 
       const duplicate = state.baseConfig.proxies.find((proxy, index) => {
@@ -1268,7 +1275,6 @@
       const proxy = {
         name: base.name,
         domain: base.domain,
-        target: base.target,
         mode,
         auth: null,
         headers: {
@@ -1277,6 +1283,10 @@
         },
         forwardedHeaders: false
       };
+
+      if (base.target) {
+        proxy.target = base.target;
+      }
 
       if (mode === 'filtered') {
         proxy.forwardedHeaders = $('forwardedHeaders').checked;
@@ -1554,8 +1564,10 @@
     function resetForm() {
       form.reset();
       globalBypassConfigInput.checked = Boolean(state.baseConfig?.globalBypassConfig);
+      overrideTargetInput.checked = false;
       state.lastAppliedMode = 'filtered';
       syncModeUI(true);
+      syncOverrideTargetUI();
       clearMessage($('formMessage'));
       refreshGeneratedConfig();
     }
@@ -1581,6 +1593,7 @@
     modeInputs.forEach((input) => {
       input.addEventListener('change', () => syncModeUI());
     });
+    overrideTargetInput.addEventListener('change', syncOverrideTargetUI);
 
     form.addEventListener('submit', (event) => event.preventDefault());
     form.addEventListener('input', refreshGeneratedConfig);
@@ -1591,6 +1604,7 @@
     $('downloadButton').addEventListener('click', downloadConfig);
 
     syncModeUI(true);
+    syncOverrideTargetUI();
     loadBaseConfig();
   </script>
 </body>

@@ -122,6 +122,10 @@ function getOriginalRequestAbsoluteUrl(parsed) {
 }
 
 function resolveTargetUrl(targetRule, parsed) {
+  if (!String(targetRule || '').trim()) {
+    return buildBypassTargetUrl(parsed);
+  }
+
   const parsedRule = parseTargetRule(targetRule);
 
   if (parsedRule.type === 'url') {
@@ -425,6 +429,6 @@ app.listen(PORT, () => {
   console.log(`API proxy server started on http://localhost:${PORT}`);
   console.log(`Loaded ${config.proxies.length} proxy configurations:`);
   config.proxies.forEach(p => {
-    console.log(`  - ${p.name}: ${p.domain} -> ${p.target} (${p.mode} mode)`);
+    console.log(`  - ${p.name}: ${p.domain} -> ${p.target || 'origin'} (${p.mode} mode)`);
   });
 });

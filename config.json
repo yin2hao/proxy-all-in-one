@@ -4,7 +4,6 @@
     {
       "name": "gemini",
       "domain": "generativelanguage.googleapis.com",
-      "target": "https://generativelanguage.googleapis.com",
       "mode": "filtered",
       "auth": {
         "type": "api-key",
@@ -35,7 +34,6 @@
     {
       "name": "nvidia",
       "domain": "integrate.api.nvidia.com",
-      "target": "https://integrate.api.nvidia.com",
       "mode": "simple",
       "auth": null,
       "headers": {

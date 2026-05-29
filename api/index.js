@@ -118,6 +118,10 @@ function getOriginalRequestAbsoluteUrl(parsed) {
 }
 
 function resolveTargetUrl(targetRule, parsed) {
+  if (!String(targetRule || '').trim()) {
+    return buildBypassTargetUrl(parsed);
+  }
+
   const parsedRule = parseTargetRule(targetRule);
 
   if (parsedRule.type === 'url') {

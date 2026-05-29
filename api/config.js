@@ -134,9 +134,9 @@ function validateProxy(proxy) {
   } else if (proxy.domain.trim().startsWith('/') && !parseRegexLiteral(proxy.domain)) {
     errors.push('domain regex is invalid, expected /pattern/flags');
   }
-  if (!proxy.target || typeof proxy.target !== 'string') {
-    errors.push('target is required and must be a string');
-  } else if (!isValidTargetRule(proxy.target)) {
+  if (proxy.target !== undefined && proxy.target !== null && typeof proxy.target !== 'string') {
+    errors.push('target must be a string when provided');
+  } else if (String(proxy.target || '').trim() && !isValidTargetRule(proxy.target)) {
     errors.push('target must be a URL or regex rule: regex:/pattern/flags => replacement');
   }
   if (!['simple', 'filtered'].includes(proxy.mode)) {
