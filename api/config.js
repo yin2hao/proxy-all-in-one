@@ -49,19 +49,28 @@ function isLocalRequest(req) {
 function getConfig() {
   try {
     if (!existsSync(CONFIG_PATH)) {
-      return { proxies: [] };
+      return normalizeConfig({});
     }
     const raw = readFileSync(CONFIG_PATH, 'utf-8');
-    return JSON.parse(raw);
+    return normalizeConfig(JSON.parse(raw));
   } catch (err) {
     console.error('Failed to read config:', err.message);
-    return { proxies: [] };
+    return normalizeConfig({});
   }
+}
+
+function normalizeConfig(config) {
+  const normalized = config && typeof config === 'object' ? config : {};
+  return {
+    ...normalized,
+    proxies: Array.isArray(normalized.proxies) ? normalized.proxies : [],
+    globalBypassConfig: Boolean(normalized.globalBypassConfig)
+  };
 }
 
 // 保存配置
 function saveConfig(config) {
-  writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
+  writeFileSync(CONFIG_PATH, JSON.stringify(normalizeConfig(config), null, 2), 'utf-8');
 }
 
 // 验证代理配置
@@ -135,6 +144,8 @@ export default async function handler(req, res) {
       if (!newConfig || !Array.isArray(newConfig.proxies)) {
         return res.status(400).json({ error: 'Invalid config format, expected { proxies: [...] }' });
       }
+
+      newConfig.globalBypassConfig = Boolean(newConfig.globalBypassConfig);
       
       // 验证每个代理
       for (const proxy of newConfig.proxies) {

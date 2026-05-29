@@ -1,4 +1,5 @@
 {
+  "globalBypassConfig": false,
   "proxies": [
     {
       "name": "gemini",

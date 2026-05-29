@@ -753,7 +753,18 @@
           </div>
 
           <div class="section">
-            <div class="section-title">2. 新增代理规则</div>
+            <div class="section-title">2. 全局转发开关</div>
+            <div class="check-list">
+              <label class="check-row">
+                <input type="checkbox" id="globalBypassConfig">
+                <span>开启后无视配置文件域名匹配，直接按代理路径中的完整网址转发（使用简单模式）</span>
+              </label>
+            </div>
+            <div class="hint">示例：访问 <code>https://你的代理域名/https://example.com/path?a=1</code> 会直接转发到 <code>https://example.com/path?a=1</code>。</div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">3. 新增代理规则</div>
             <div class="usage-note">
               <strong>代理使用方式</strong>
               <span>配置完成后，可将完整原网址接在代理域名后：<code>https://你的代理域名/https://原网站/路径</code>。</span>
@@ -779,7 +790,7 @@
           </div>
 
           <div class="section">
-            <div class="section-title">3. 代理模式</div>
+            <div class="section-title">4. 代理模式</div>
             <div class="mode-grid" role="radiogroup" aria-label="代理模式">
               <label class="mode-card">
                 <input type="radio" name="proxyMode" value="filtered" checked>
@@ -795,7 +806,7 @@
           </div>
 
           <div id="filteredOptions" class="section">
-            <div class="section-title">4. 过滤模式选项</div>
+            <div class="section-title">5. 过滤模式选项</div>
             <div class="check-list">
               <label class="check-row">
                 <input type="checkbox" id="apiKeyAuth" checked>
@@ -903,6 +914,7 @@
     const modeInputs = Array.from(document.querySelectorAll('input[name="proxyMode"]'));
     const removeReqHeaders = $('removeReqHeaders');
     const removeResHeaders = $('removeResHeaders');
+    const globalBypassConfigInput = $('globalBypassConfig');
 
     async function loadBaseConfig() {
       setStatus('正在读取基础配置');
@@ -916,6 +928,7 @@
 
         const data = await response.json();
         state.baseConfig = normalizeConfig(data);
+        globalBypassConfigInput.checked = state.baseConfig.globalBypassConfig;
         state.configLoaded = true;
         state.configLoadFailed = false;
         state.deletedProxyKeys.clear();
@@ -942,6 +955,7 @@
       if (!Array.isArray(normalized.proxies)) {
         normalized.proxies = [];
       }
+      normalized.globalBypassConfig = Boolean(normalized.globalBypassConfig);
 
       return normalized;
     }
@@ -1221,6 +1235,7 @@
 
     function createMergedConfig(proxy) {
       const nextConfig = normalizeConfig(state.baseConfig);
+      nextConfig.globalBypassConfig = Boolean(globalBypassConfigInput.checked);
       nextConfig.proxies = nextConfig.proxies.filter((item, index) => {
         return !state.deletedProxyKeys.has(getProxyKey(item, index));
       });
@@ -1403,11 +1418,12 @@
         const nextConfig = createMergedConfig(proxy);
         const removedCount = state.deletedProxyKeys.size;
         state.lastConfigText = JSON.stringify(nextConfig, null, 2);
+        const globalSwitchText = nextConfig.globalBypassConfig ? '开启' : '关闭';
 
         const addedText = proxy ? `新增 1 条` : '未新增';
         const removedText = removedCount > 0 ? `删除 ${removedCount} 条` : '未删除';
         $('resultSummaryTitle').textContent = '完整配置已准备好';
-        $('resultSummaryText').textContent = `${addedText}，${removedText}；可直接复制或下载。`;
+        $('resultSummaryText').textContent = `${addedText}，${removedText}；全局直连开关：${globalSwitchText}。`;
         renderDiffPreview(state.baseConfig, nextConfig);
         $('resultEmpty').style.display = 'none';
         $('resultReady').style.display = 'block';
@@ -1470,6 +1486,7 @@
 
     function resetForm() {
       form.reset();
+      globalBypassConfigInput.checked = Boolean(state.baseConfig?.globalBypassConfig);
       state.lastAppliedMode = 'filtered';
       syncModeUI(true);
       clearMessage($('formMessage'));

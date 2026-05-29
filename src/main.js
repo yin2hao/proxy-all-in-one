@@ -15,11 +15,20 @@ function loadConfig() {
   try {
     const configPath = join(__dirname, '..', 'config.json');
     const raw = readFileSync(configPath, 'utf-8');
-    return JSON.parse(raw);
+    return normalizeConfig(JSON.parse(raw));
   } catch (err) {
     console.error('Failed to load config.json:', err.message);
-    return { proxies: [] };
+    return normalizeConfig({});
   }
+}
+
+function normalizeConfig(config) {
+  const normalized = config && typeof config === 'object' ? config : {};
+  return {
+    ...normalized,
+    proxies: Array.isArray(normalized.proxies) ? normalized.proxies : [],
+    globalBypassConfig: Boolean(normalized.globalBypassConfig)
+  };
 }
 
 function normalizeHost(value) {
@@ -70,7 +79,8 @@ function parseProxyUrl(url) {
       const targetUrl = new URL(candidate);
       return {
         domain: targetUrl.hostname.toLowerCase(),
-        path: `${targetUrl.pathname || '/'}${targetUrl.search || ''}`
+        path: `${targetUrl.pathname || '/'}${targetUrl.search || ''}`,
+        absoluteTargetUrl: targetUrl.toString()
       };
     } catch {
       // Fall through to the legacy domain/path format.
@@ -84,7 +94,8 @@ function parseProxyUrl(url) {
   const suffix = match[2] || '/';
   return {
     domain: normalizeHost(match[1]),
-    path: suffix
+    path: suffix,
+    absoluteTargetUrl: ''
   };
 }
 
@@ -95,6 +106,14 @@ function buildTargetUrl(target, path) {
     return `${normalizedTarget}${path}`;
   }
   return `${normalizedTarget}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
+function buildBypassTargetUrl(parsed) {
+  if (parsed.absoluteTargetUrl) {
+    return parsed.absoluteTargetUrl;
+  }
+  const base = `https://${parsed.domain}`;
+  return buildTargetUrl(base, parsed.path);
 }
 
 // 替换模板变量
@@ -150,9 +169,18 @@ app.all('*', async (req, res) => {
   }
   
   const { domain, path } = parsed;
-  
-  // 查找对应的代理配置
-  const proxyConfig = findProxyByDomain(config, domain);
+  const bypassEnabled = config.globalBypassConfig;
+  const proxyConfig = bypassEnabled
+    ? {
+        name: '__global_bypass__',
+        mode: 'simple',
+        headers: {
+          removeRequest: ['host', 'content-length', 'connection'],
+          removeResponse: ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        }
+      }
+    : findProxyByDomain(config, domain);
+
   if (!proxyConfig) {
     return res.status(404).json({
       error: 'No proxy configured for this domain',
@@ -160,11 +188,15 @@ app.all('*', async (req, res) => {
       availableProxies: config.proxies.map(p => p.domain)
     });
   }
-  
+
   // 构建目标 URL
-  const targetUrl = buildTargetUrl(proxyConfig.target, path);
-  
-  console.log(`[proxy] ${req.method} ${req.url} -> ${targetUrl} (${proxyConfig.mode} mode)`);
+  const targetUrl = bypassEnabled ? buildBypassTargetUrl(parsed) : buildTargetUrl(proxyConfig.target, path);
+
+  if (bypassEnabled) {
+    console.log(`[proxy] ${req.method} ${req.url} -> ${targetUrl} (global bypass simple mode)`);
+  } else {
+    console.log(`[proxy] ${req.method} ${req.url} -> ${targetUrl} (${proxyConfig.mode} mode)`);
+  }
   
   // 根据模式处理请求头
   let headers = {};
